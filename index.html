@@ -225,6 +225,50 @@
     }
     #spin-btn:hover { opacity: 0.9; }
     #spin-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* === Right Panel === */
+    #right-panel { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    #map-container { flex: 1; position: relative; min-height: 0; }
+    #map { width: 100%; height: 100%; }
+
+    /* Map overlay badges */
+    #map-overlay {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      pointer-events: none;
+      z-index: 5;
+    }
+    #map-badge {
+      background: rgba(255,255,255,0.95);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 11px;
+      color: #555;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      pointer-events: all;
+    }
+    #map-hint {
+      background: rgba(126,105,182,0.92);
+      color: var(--white);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      display: none;
+      align-items: center;
+      gap: 5px;
+    }
+    #map-hint.visible { display: flex; }
   </style>
 </head>
 <body>
@@ -320,11 +364,142 @@
         </button>
       </div>
     </div>
+    <div id="right-panel">
+      <div id="map-container">
+        <div id="map"></div>
+        <div id="map-overlay">
+          <div id="map-badge">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7e69b6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span id="badge-text">尚未設定位置</span>
+          </div>
+          <div id="map-hint">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+            點地圖任意位置來設定搜尋中心
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 <script>
-  // Lucide icons: replaces data-lucide elements added by later tasks
+// ── State ──
+const state = {
+  center: null,        // google.maps.LatLng
+  radiusMeters: 1000,
+  keywords: [],        // selected cuisine types
+  places: [],          // PlaceResult[]
+  spinning: false,
+  clickMapMode: false,
+};
+
+// ── Map module ──
+let map, centerMarker, searchCircle, placeMarkers = [], infoWindow;
+
+function initMap() {
+  const taipei = { lat: 25.0338, lng: 121.5654 };
+  map = new google.maps.Map(document.getElementById('map'), {
+    center: taipei,
+    zoom: 14,
+    mapTypeControl: false,
+    streetViewControl: false,
+    fullscreenControl: false,
+    styles: [
+      { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] }
+    ],
+  });
+
+  infoWindow = new google.maps.InfoWindow();
+
+  map.addListener('click', (e) => {
+    if (!state.clickMapMode) return;
+    setCenter(e.latLng);
+    exitClickMapMode();
+  });
+
+  // Lucide icons initialized after DOM is ready
   lucide.createIcons();
+}
+
+function setCenter(latLng) {
+  state.center = latLng;
+  if (centerMarker) centerMarker.setMap(null);
+  centerMarker = new google.maps.Marker({
+    position: latLng,
+    map,
+    draggable: true,
+    icon: {
+      path: google.maps.SymbolPath.CIRCLE,
+      scale: 10,
+      fillColor: '#7e69b6',
+      fillOpacity: 1,
+      strokeColor: '#fff',
+      strokeWeight: 2,
+    },
+    title: '搜尋中心',
+    zIndex: 10,
+  });
+  centerMarker.addListener('dragend', (e) => setCenter(e.latLng));
+  updateSearchCircle();
+  reverseGeocode(latLng);
+}
+
+function updateSearchCircle() {
+  if (searchCircle) searchCircle.setMap(null);
+  if (!state.center) return;
+  searchCircle = new google.maps.Circle({
+    map,
+    center: state.center,
+    radius: state.radiusMeters,
+    fillColor: '#7e69b6',
+    fillOpacity: 0.08,
+    strokeColor: '#7e69b6',
+    strokeOpacity: 0.4,
+    strokeWeight: 1.5,
+  });
+}
+
+function reverseGeocode(latLng) {
+  const geocoder = new google.maps.Geocoder();
+  geocoder.geocode({ location: latLng }, (results, status) => {
+    if (status === 'OK' && results[0]) {
+      document.getElementById('loc-input').value = results[0].formatted_address;
+      updateBadge();
+    }
+  });
+}
+
+function updateBadge() {
+  const RADIUS_LABELS = ['500m', '1 km', '2 km', '5 km'];
+  const radiusLabel = RADIUS_LABELS[document.getElementById('radius-slider').value];
+  const count = state.places.length;
+  const addr = document.getElementById('loc-input').value || '已設定位置';
+  document.getElementById('badge-text').textContent =
+    count > 0
+      ? `${addr.split(',')[0]} · ${radiusLabel} · ${count} 家`
+      : addr.split(',')[0];
+}
+
+function enterClickMapMode() {
+  state.clickMapMode = true;
+  document.getElementById('map-hint').classList.add('visible');
+  map.setOptions({ draggableCursor: 'crosshair' });
+}
+
+function exitClickMapMode() {
+  state.clickMapMode = false;
+  document.getElementById('map-hint').classList.remove('visible');
+  map.setOptions({ draggableCursor: null });
+}
+
+function clearPlaceMarkers() {
+  placeMarkers.forEach(m => m.setMap(null));
+  placeMarkers = [];
+  infoWindow.close();
+}
+</script>
+
+<script async
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD_zNYGHtJpRMFpwnSjBFZLf3-kBnRhLvs&libraries=places&callback=initMap">
 </script>
 </body>
 </html>
