@@ -50,6 +50,180 @@
 
     /* === Main === */
     #main { display: flex; flex: 1; min-height: 0; }
+
+    /* === Sidebar === */
+    #sidebar {
+      width: 300px;
+      background: var(--white);
+      border-right: 1px solid #eee;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+    .sb-section {
+      padding: 16px;
+      border-bottom: 1px solid var(--purple-tint);
+    }
+    .sb-section:last-child { border-bottom: none; }
+    .sb-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: var(--purple-muted);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* Location inputs */
+    .loc-input-wrap { position: relative; margin-bottom: 8px; }
+    #loc-input {
+      width: 100%;
+      border: 1.5px solid var(--purple-border);
+      border-radius: 10px;
+      padding: 9px 36px 9px 12px;
+      font-size: 13px;
+      color: var(--text);
+      outline: none;
+      background: #faf9fd;
+    }
+    #loc-input:focus { border-color: var(--purple); }
+    .loc-input-icon {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--purple-muted);
+      display: flex;
+      cursor: pointer;
+    }
+    .loc-methods { display: flex; gap: 6px; }
+    .loc-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 7px 8px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+    }
+    .loc-btn.primary { background: var(--purple); color: var(--white); }
+    .loc-btn.secondary { background: var(--purple-tint); color: var(--purple); }
+    .loc-btn:hover { opacity: 0.88; }
+
+    /* Slider */
+    .slider-row { display: flex; align-items: center; gap: 10px; }
+    #radius-slider {
+      flex: 1;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 4px;
+      border-radius: 2px;
+      background: linear-gradient(to right, var(--purple) 25%, var(--purple-border) 25%);
+      outline: none;
+    }
+    #radius-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: var(--purple);
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(126,105,182,0.4);
+    }
+    #radius-val { font-size: 13px; color: var(--purple); font-weight: 700; min-width: 44px; text-align: right; }
+    .slider-ticks { display: flex; justify-content: space-between; font-size: 10px; color: #bbb; margin-top: 4px; }
+
+    /* Chips */
+    #chips-wrap { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .chip {
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 16px;
+      border: 1.5px solid var(--purple-border);
+      color: var(--purple);
+      background: var(--white);
+      font-weight: 500;
+      cursor: pointer;
+      user-select: none;
+    }
+    .chip.active { background: var(--purple); color: var(--white); border-color: var(--purple); }
+    #chip-custom {
+      border: 1.5px dashed var(--purple-muted);
+      border-radius: 16px;
+      padding: 4px 10px;
+      font-size: 11px;
+      color: var(--text);
+      outline: none;
+      width: 80px;
+      background: #faf9fd;
+    }
+    #chip-custom::placeholder { color: #ccc; }
+
+    /* Search button */
+    #search-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      background: var(--purple);
+      color: var(--white);
+      border: none;
+      padding: 10px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 4px;
+    }
+    #search-btn:hover { opacity: 0.9; }
+    #search-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Wheel area */
+    #wheel-section {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      flex: 1;
+    }
+    #wheel-wrap { position: relative; width: 180px; height: 180px; }
+    #wheel-canvas {
+      border-radius: 50%;
+      box-shadow: 0 6px 24px rgba(126,105,182,0.28);
+      display: block;
+    }
+    #wheel-pointer {
+      position: absolute;
+      top: -6px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2;
+    }
+    #spin-btn {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--purple);
+      color: var(--white);
+      border: none;
+      padding: 11px 32px;
+      border-radius: 50px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 5px 16px rgba(126,105,182,0.38);
+    }
+    #spin-btn:hover { opacity: 0.9; }
+    #spin-btn:disabled { opacity: 0.5; cursor: not-allowed; }
   </style>
 </head>
 <body>
@@ -61,7 +235,90 @@
     </div>
   </nav>
   <div id="main">
-    <!-- sidebar + map inserted by later tasks -->
+    <div id="sidebar">
+      <!-- Location -->
+      <div class="sb-section">
+        <div class="sb-label">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+          搜尋中心位置
+        </div>
+        <div class="loc-input-wrap">
+          <input id="loc-input" type="text" placeholder="輸入地址或地點名稱…">
+          <span class="loc-input-icon" id="loc-search-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          </span>
+        </div>
+        <div class="loc-methods">
+          <button class="loc-btn primary" id="btn-my-loc">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
+            使用我的位置
+          </button>
+          <button class="loc-btn secondary" id="btn-click-map">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+            點地圖選擇
+          </button>
+        </div>
+      </div>
+
+      <!-- Distance -->
+      <div class="sb-section">
+        <div class="sb-label">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+          搜尋距離
+        </div>
+        <div class="slider-row">
+          <input type="range" id="radius-slider" min="0" max="3" value="1" step="1">
+          <span id="radius-val">1 km</span>
+        </div>
+        <div class="slider-ticks">
+          <span>500m</span><span>1 km</span><span>2 km</span><span>5 km</span>
+        </div>
+      </div>
+
+      <!-- Cuisine -->
+      <div class="sb-section">
+        <div class="sb-label">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3v7"/></svg>
+          料理類型（可多選）
+        </div>
+        <div id="chips-wrap">
+          <div class="chip active" data-value="">全部</div>
+          <div class="chip" data-value="日式料理">日式</div>
+          <div class="chip" data-value="中式料理">中式</div>
+          <div class="chip" data-value="西式料理">西式</div>
+          <div class="chip" data-value="火鍋">火鍋</div>
+          <div class="chip" data-value="燒烤">燒烤</div>
+          <div class="chip" data-value="咖啡廳">咖啡廳</div>
+          <input id="chip-custom" type="text" placeholder="自訂…">
+        </div>
+      </div>
+
+      <!-- Search -->
+      <div class="sb-section">
+        <button id="search-btn" disabled>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          搜尋附近餐廳
+        </button>
+      </div>
+
+      <!-- Wheel -->
+      <div id="wheel-section">
+        <div class="sb-label" style="align-self:flex-start;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+          <span id="wheel-label">轉盤（尚未搜尋）</span>
+        </div>
+        <div id="wheel-wrap">
+          <svg id="wheel-pointer" width="20" height="20" viewBox="0 0 20 20">
+            <polygon points="10,2 17,17 3,17" fill="#7e69b6"/>
+          </svg>
+          <canvas id="wheel-canvas" width="180" height="180"></canvas>
+        </div>
+        <button id="spin-btn" disabled>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+          開始抽籤
+        </button>
+      </div>
+    </div>
   </div>
 </div>
 <script>
