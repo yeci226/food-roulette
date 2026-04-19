@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>今天吃什麼？</title>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    /* === Reset & Base === */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --purple: #7e69b6;
+      --purple-light: #9b87cc;
+      --purple-pale: #baaee0;
+      --purple-bg: #f5f4f9;
+      --purple-tint: #f0edf8;
+      --purple-border: #e0d9f5;
+      --purple-muted: #a99cc8;
+      --white: #ffffff;
+      --text: #222222;
+      --text-muted: #888888;
+    }
+    html, body { height: 100%; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; background: var(--purple-bg); color: var(--text); }
+
+    /* === Layout === */
+    #app { display: flex; flex-direction: column; height: 100vh; }
+
+    /* === Nav === */
+    #nav {
+      background: var(--white);
+      height: 54px;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #eee;
+      flex-shrink: 0;
+      z-index: 10;
+    }
+    #nav-brand {
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--purple);
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #nav-brand span { color: var(--text); }
+
+    /* === Main === */
+    #main { display: flex; flex: 1; min-height: 0; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <nav id="nav">
+    <div id="nav-brand">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20A14.5 14.5 0 0 0 12 2"/><path d="M2 12h20"/></svg>
+      今天吃<span>什麼？</span>
+    </div>
+  </nav>
+  <div id="main">
+    <!-- sidebar + map inserted by later tasks -->
+  </div>
+</div>
+<script>
+  lucide.createIcons();
+</script>
+</body>
+</html>
