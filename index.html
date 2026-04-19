@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>今天吃什麼？</title>
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://unpkg.com/lucide@0.488.0/dist/umd/lucide.min.js" defer></script>
   <style>
     /* === Reset & Base === */
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -33,7 +33,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid #eee;
+      border-bottom: 1px solid var(--purple-border);
       flex-shrink: 0;
       z-index: 10;
     }
@@ -65,6 +65,7 @@
   </div>
 </div>
 <script>
+  // Lucide icons: replaces data-lucide elements added by later tasks
   lucide.createIcons();
 </script>
 </body>
