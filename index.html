@@ -3,7 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="吃什麼轉盤：輸入位置與半徑，快速幫你從附近餐廳隨機抽一間，分享連結可直接帶入設定。">
+  <meta name="robots" content="index,follow">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="吃什麼轉盤">
+  <meta property="og:title" content="吃什麼轉盤">
+  <meta property="og:description" content="輸入位置與半徑，快速抽出今天要吃哪一間。分享連結可保留搜尋條件。">
+  <meta property="og:url" content="https://yeci226.github.io/food-roulette/">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="吃什麼轉盤">
+  <meta name="twitter:description" content="輸入位置與半徑，快速抽出今天要吃哪一間。分享連結可保留搜尋條件。">
+  <meta name="twitter:url" content="https://yeci226.github.io/food-roulette/">
+  <link rel="canonical" href="https://yeci226.github.io/food-roulette/">
   <title>吃什麼轉盤</title>
+  <script>
+    (function syncShareUrlMeta() {
+      var currentUrl = window.location.href;
+      var ogUrlTag = document.querySelector('meta[property="og:url"]');
+      var twitterUrlTag = document.querySelector('meta[name="twitter:url"]');
+      var canonicalTag = document.querySelector('link[rel="canonical"]');
+
+      if (ogUrlTag) ogUrlTag.setAttribute("content", currentUrl);
+      if (twitterUrlTag) twitterUrlTag.setAttribute("content", currentUrl);
+      if (canonicalTag) canonicalTag.setAttribute("href", currentUrl);
+    })();
+  </script>
   <script src="https://unpkg.com/lucide@0.488.0/dist/umd/lucide.min.js" defer></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -68,6 +92,25 @@
       display: flex;
       align-items: center;
       gap: 8px;
+    }
+
+    #repo-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border: 1px solid var(--purple-border);
+      border-radius: 999px;
+      background: #faf9fd;
+      color: var(--purple);
+      text-decoration: none;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+    }
+
+    #repo-link:hover {
+      opacity: 0.92;
+      transform: translateY(-1px);
     }
 
     #settings-btn {
@@ -866,6 +909,9 @@
         吃什麼<span>轉盤</span>
       </div>
       <div id="nav-actions">
+        <a id="repo-link" href="https://github.com/yeci226/food-roulette" target="_blank" rel="noreferrer" aria-label="前往 GitHub Repo">
+          <i data-lucide="github" aria-hidden="true"></i>
+        </a>
         <button id="settings-btn" type="button" aria-label="設定 Google API Key">
           <i data-lucide="settings" aria-hidden="true"></i>
           API 設定
@@ -1110,6 +1156,8 @@
     const RADIUS_LABELS = ["250m", "500m", "750m", "1 km", "1.5 km", "2 km", "3 km", "5 km"];
     const PRICE_LABELS = ["不限", "$", "$$", "$$$", "$$$$"];
     const WHEEL_COLORS = ["#7e69b6", "#9b87cc", "#baaee0", "#8f78c7"];
+    const DEFAULT_PAGE_TITLE = "吃什麼轉盤";
+    const DEFAULT_PAGE_DESCRIPTION = "輸入位置與半徑，快速抽出今天要吃哪一間。分享連結可保留搜尋條件。";
 
     const state = {
       center: null,
@@ -1121,6 +1169,7 @@
       favorites: [],
       history: [],
       selectedPlace: null,
+      selectedPlaceName: "",
       spinning: false,
       clickMapMode: false,
     };
@@ -1201,6 +1250,7 @@
         keywords: [...state.keywords],
         address: addressPayload,
         center: centerPayload,
+        selectedPlaceName: state.selectedPlaceName,
         updatedAt: Date.now(),
       };
       if (canUseStorage) localStorage.setItem(STORAGE_KEYS.prefs, JSON.stringify(payload));
@@ -1241,7 +1291,7 @@
 
     function getPrefsFromUrl() {
       const params = new URLSearchParams(window.location.search);
-      const hasKnownParams = ["lat", "lng", "r", "p", "o", "k", "a"].some((key) => params.has(key));
+      const hasKnownParams = ["lat", "lng", "r", "p", "o", "k", "a", "m"].some((key) => params.has(key));
       if (!hasKnownParams) return null;
 
       const lat = Number.parseFloat(params.get("lat"));
@@ -1268,6 +1318,7 @@
       const openNow = params.get("o") === "1";
       const keywords = params.getAll("k").map((item) => item.trim()).filter(Boolean);
       const address = (params.get("a") || "").trim();
+      const selectedPlaceName = (params.get("m") || "").trim();
 
       return {
         radiusMeters,
@@ -1276,7 +1327,47 @@
         keywords,
         address,
         center,
+        selectedPlaceName,
       };
+    }
+
+    function updateShareMeta(currentUrl, selectedPlaceName = "") {
+      const placeName = (selectedPlaceName || "").trim();
+      const pageTitle = placeName ? `${placeName} | ${DEFAULT_PAGE_TITLE}` : DEFAULT_PAGE_TITLE;
+      const description = placeName
+        ? `已選店家：${placeName}。${DEFAULT_PAGE_DESCRIPTION}`
+        : DEFAULT_PAGE_DESCRIPTION;
+
+      document.title = pageTitle;
+
+      const selectors = {
+        description: 'meta[name="description"]',
+        ogTitle: 'meta[property="og:title"]',
+        ogDescription: 'meta[property="og:description"]',
+        ogUrl: 'meta[property="og:url"]',
+        twitterTitle: 'meta[name="twitter:title"]',
+        twitterDescription: 'meta[name="twitter:description"]',
+        twitterUrl: 'meta[name="twitter:url"]',
+        canonical: 'link[rel="canonical"]',
+      };
+
+      const descriptionTag = document.querySelector(selectors.description);
+      const ogTitleTag = document.querySelector(selectors.ogTitle);
+      const ogDescriptionTag = document.querySelector(selectors.ogDescription);
+      const ogUrlTag = document.querySelector(selectors.ogUrl);
+      const twitterTitleTag = document.querySelector(selectors.twitterTitle);
+      const twitterDescriptionTag = document.querySelector(selectors.twitterDescription);
+      const twitterUrlTag = document.querySelector(selectors.twitterUrl);
+      const canonicalTag = document.querySelector(selectors.canonical);
+
+      if (descriptionTag) descriptionTag.setAttribute("content", description);
+      if (ogTitleTag) ogTitleTag.setAttribute("content", pageTitle);
+      if (ogDescriptionTag) ogDescriptionTag.setAttribute("content", description);
+      if (ogUrlTag) ogUrlTag.setAttribute("content", currentUrl);
+      if (twitterTitleTag) twitterTitleTag.setAttribute("content", pageTitle);
+      if (twitterDescriptionTag) twitterDescriptionTag.setAttribute("content", description);
+      if (twitterUrlTag) twitterUrlTag.setAttribute("content", currentUrl);
+      if (canonicalTag) canonicalTag.setAttribute("href", currentUrl);
     }
 
     function syncUrlWithCurrentFilters(prefsOverride = null) {
@@ -1289,6 +1380,7 @@
         center: state.center
           ? { lat: state.center.lat(), lng: state.center.lng() }
           : null,
+        selectedPlaceName: state.selectedPlaceName,
       };
 
       const params = new URLSearchParams();
@@ -1305,10 +1397,12 @@
         params.set("lng", String(source.center.lng));
         if (source.address) params.set("a", source.address);
       }
+      if (source.selectedPlaceName) params.set("m", source.selectedPlaceName);
 
       const queryString = params.toString();
       const nextUrl = `${window.location.pathname}${queryString ? `?${queryString}` : ""}${window.location.hash || ""}`;
       window.history.replaceState(null, "", nextUrl);
+      updateShareMeta(new URL(nextUrl, window.location.origin).href, source.selectedPlaceName || "");
     }
 
     function updateSearchAvailability() {
@@ -2055,6 +2149,7 @@
           state.center = null;
           state.places = [];
           state.selectedPlace = null;
+          state.selectedPlaceName = "";
           clearPlaceMarkers();
           hideResult();
           document.getElementById("wheel-center-btn").disabled = true;
@@ -2196,6 +2291,9 @@
       clearPlaceMarkers();
       hideResult();
       state.places = [];
+      state.selectedPlace = null;
+      state.selectedPlaceName = "";
+      syncUrlWithCurrentFilters();
       setSearchProgress("");
       document.getElementById("wheel-label").textContent = "搜尋中，找到的店家會逐步出現";
 
@@ -2506,6 +2604,7 @@
 
     function showResult(place, markerIndex = -1, markerOverride = null) {
       state.selectedPlace = place;
+      state.selectedPlaceName = place && place.name ? place.name.trim() : "";
       document.getElementById("result-name").innerHTML = `
         <a href="${getPlaceUrl(place)}" target="_blank" rel="noreferrer">${place.name}</a>
       `;
@@ -2560,6 +2659,7 @@
       syncFavoriteButton();
       document.getElementById("result-strip").classList.add("visible");
       pushHistory(place);
+      syncUrlWithCurrentFilters();
     }
 
     function hideResult() {
@@ -2599,6 +2699,7 @@
       state.openNow = openNowToggle.checked;
 
       applySavedKeywords(prefs.keywords);
+      state.selectedPlaceName = prefs.selectedPlaceName || "";
 
       if (prefs.center) {
         const latLng = new google.maps.LatLng(prefs.center.lat, prefs.center.lng);
