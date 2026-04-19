@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>今天吃什麼？</title>
+  <title>吃什麼轉盤</title>
   <script src="https://unpkg.com/lucide@0.488.0/dist/umd/lucide.min.js" defer></script>
   <style>
-    /* === Reset & Base === */
-    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     :root {
       --purple: #7e69b6;
       --purple-light: #9b87cc;
@@ -18,43 +18,82 @@
       --purple-muted: #a99cc8;
       --white: #ffffff;
       --text: #222222;
-      --text-muted: #888888;
+      --text-muted: #777777;
+      --danger: #e05c3a;
     }
-    html, body { height: 100%; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; background: var(--purple-bg); color: var(--text); }
 
-    /* === Layout === */
-    #app { display: flex; flex-direction: column; height: 100vh; }
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--purple-bg);
+      color: var(--text);
+    }
 
-    /* === Nav === */
+    button, input { font: inherit; }
+
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
     #nav {
-      background: var(--white);
-      height: 54px;
+      height: 56px;
       padding: 0 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       border-bottom: 1px solid var(--purple-border);
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(8px);
       flex-shrink: 0;
       position: relative;
       z-index: 10;
     }
+
     #nav-brand {
-      font-size: 17px;
-      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 8px;
       color: var(--purple);
-      letter-spacing: -0.5px;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    #nav-brand span { color: var(--text); }
+
+    #nav-actions {
       display: flex;
       align-items: center;
       gap: 8px;
     }
-    #nav-brand span { color: var(--text); }
 
-    /* === Main === */
-    #main { display: flex; flex: 1; min-height: 0; }
+    #settings-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 10px;
+      border: 1px solid var(--purple-border);
+      border-radius: 999px;
+      background: #faf9fd;
+      color: var(--purple);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
 
-    /* === Sidebar === */
+    #settings-btn:hover { opacity: 0.92; }
+
+    #main {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+    }
+
     #sidebar {
-      width: 300px;
+      width: 340px;
       background: var(--white);
       border-right: 1px solid var(--purple-border);
       display: flex;
@@ -62,36 +101,44 @@
       overflow-y: auto;
       flex-shrink: 0;
     }
+
     .sb-section {
       padding: 16px;
       border-bottom: 1px solid var(--purple-tint);
     }
-    .sb-section:last-child { border-bottom: none; }
+
     .sb-label {
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 1.2px;
-      text-transform: uppercase;
-      color: var(--purple-muted);
-      margin-bottom: 10px;
       display: flex;
       align-items: center;
-      gap: 5px;
+      gap: 6px;
+      margin-bottom: 10px;
+      color: var(--purple-muted);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
     }
 
-    /* Location inputs */
-    .loc-input-wrap { position: relative; margin-bottom: 8px; }
+    .loc-input-wrap {
+      position: relative;
+      margin-bottom: 8px;
+    }
+
     #loc-input {
       width: 100%;
+      padding: 10px 38px 10px 12px;
       border: 1.5px solid var(--purple-border);
       border-radius: 10px;
-      padding: 9px 36px 9px 12px;
-      font-size: 13px;
+      background: #faf9fd;
       color: var(--text);
       outline: none;
-      background: #faf9fd;
     }
-    #loc-input:focus { border-color: var(--purple); }
+
+    #loc-input:focus,
+    #chip-custom:focus {
+      border-color: var(--purple);
+    }
+
     .loc-input-icon {
       position: absolute;
       right: 10px;
@@ -101,151 +148,421 @@
       display: flex;
       cursor: pointer;
     }
-    .loc-methods { display: flex; gap: 6px; }
+
+    .loc-methods {
+      display: flex;
+      gap: 6px;
+    }
+
+    .loc-btn,
+    #search-btn,
+    #spin-btn,
+    .action-btn,
+    .mini-btn,
+    .memory-item,
+    .favorite-toggle {
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.15s ease, transform 0.15s ease, background-color 0.15s ease;
+    }
+
     .loc-btn {
       flex: 1;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 5px;
-      padding: 7px 8px;
+      padding: 8px 10px;
       border-radius: 8px;
       font-size: 11px;
       font-weight: 600;
-      cursor: pointer;
-      border: none;
     }
-    .loc-btn.primary { background: var(--purple); color: var(--white); }
-    .loc-btn.secondary { background: var(--purple-tint); color: var(--purple); }
-    .loc-btn:hover { opacity: 0.88; }
-    .loc-btn.active { outline: 2px solid var(--purple); outline-offset: 1px; }
+
+    .loc-btn.primary {
+      background: var(--purple);
+      color: var(--white);
+    }
+
+    .loc-btn.secondary {
+      background: var(--purple-tint);
+      color: var(--purple);
+    }
+
+    .loc-btn.active {
+      outline: 2px solid var(--purple);
+      outline-offset: 1px;
+    }
+
     #loc-error {
-      font-size: 11px;
-      color: #e05c3a;
-      margin-top: 5px;
-      display: none;
       min-height: 16px;
+      margin-top: 6px;
+      color: var(--danger);
+      font-size: 11px;
+      display: none;
     }
+
     #loc-error.visible { display: block; }
 
-    /* Slider */
-    .slider-row { display: flex; align-items: center; gap: 10px; }
-    #radius-slider {
+    .helper-text {
+      margin-top: 8px;
+      color: var(--text-muted);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .slider-track-wrap {
       flex: 1;
+      min-width: 0;
+    }
+
+    #radius-slider,
+    #price-slider {
+      flex: 1;
+      width: 100%;
       -webkit-appearance: none;
       appearance: none;
       height: 4px;
-      border-radius: 2px;
+      border-radius: 999px;
       background: linear-gradient(to right, var(--purple) 33%, var(--purple-border) 33%);
       outline: none;
     }
-    #radius-slider::-webkit-slider-thumb {
+
+    #radius-slider::-webkit-slider-thumb,
+    #price-slider::-webkit-slider-thumb {
       -webkit-appearance: none;
-      width: 16px; height: 16px;
+      width: 16px;
+      height: 16px;
       border-radius: 50%;
       background: var(--purple);
+      box-shadow: 0 2px 6px rgba(126, 105, 182, 0.4);
       cursor: pointer;
-      box-shadow: 0 2px 6px rgba(126,105,182,0.4);
     }
-    #radius-val { font-size: 13px; color: var(--purple); font-weight: 700; min-width: 44px; text-align: right; }
-    .slider-ticks { display: flex; justify-content: space-between; font-size: 10px; color: #bbb; margin-top: 4px; }
 
-    /* Chips */
-    #chips-wrap { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-    .chip {
-      font-size: 11px;
-      padding: 4px 10px;
-      border-radius: 16px;
-      border: 1.5px solid var(--purple-border);
+    #radius-val,
+    #price-val {
+      min-width: 56px;
+      text-align: right;
       color: var(--purple);
-      background: var(--white);
-      font-weight: 500;
-      cursor: pointer;
-      user-select: none;
+      font-size: 13px;
+      font-weight: 700;
     }
-    .chip.active { background: var(--purple); color: var(--white); border-color: var(--purple); }
-    button.chip { font-family: inherit; }
-    #chip-custom {
-      border: 1.5px dashed var(--purple-muted);
-      border-radius: 16px;
-      padding: 4px 10px;
-      font-size: 11px;
-      color: var(--text);
-      outline: none;
-      width: 80px;
+
+    .slider-ticks {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 4px;
+      color: #b3b3b3;
+      font-size: 10px;
+      gap: 6px;
+      overflow-x: auto;
+      white-space: nowrap;
+      scrollbar-width: none;
+    }
+
+    .slider-track-wrap .slider-ticks {
+      width: 100%;
+    }
+
+    .slider-ticks::-webkit-scrollbar { display: none; }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      border: 1px solid var(--purple-border);
+      border-radius: 12px;
       background: #faf9fd;
     }
-    #chip-custom::placeholder { color: #ccc; }
 
-    /* Search button */
+    .toggle-copy {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .toggle-title {
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .toggle-desc {
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      border-radius: 999px;
+      background: #d8d1ea;
+      transition: background-color 0.2s ease;
+      cursor: pointer;
+    }
+
+    .toggle-slider::before {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+      transition: transform 0.2s ease;
+    }
+
+    .toggle-switch input:checked + .toggle-slider {
+      background: var(--purple);
+    }
+
+    .toggle-switch input:checked + .toggle-slider::before {
+      transform: translateX(20px);
+    }
+
+    #chips-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .chip {
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1.5px solid var(--purple-border);
+      background: var(--white);
+      color: var(--purple);
+      font-size: 11px;
+      font-weight: 500;
+      user-select: none;
+    }
+
+    .chip.active {
+      background: var(--purple);
+      border-color: var(--purple);
+      color: var(--white);
+    }
+
+    #chip-custom {
+      width: 88px;
+      padding: 4px 10px;
+      border: 1.5px dashed var(--purple-muted);
+      border-radius: 999px;
+      background: #faf9fd;
+      outline: none;
+      font-size: 11px;
+    }
+
+    #chip-custom::placeholder { color: #c8c8c8; }
+
     #search-btn {
+      width: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 6px;
-      width: 100%;
+      padding: 11px;
+      border-radius: 10px;
       background: var(--purple);
       color: var(--white);
-      border: none;
-      padding: 10px;
-      border-radius: 10px;
       font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      margin-top: 4px;
-      transition: opacity 0.15s;
+      font-weight: 700;
     }
-    #search-btn:hover { opacity: 0.9; }
-    #search-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .icon-spin { animation: spin 0.8s linear infinite; }
 
-    /* Wheel area */
+    .memory-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .memory-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .mini-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 8px;
+      border-radius: 999px;
+      background: var(--purple-tint);
+      color: var(--purple);
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .mini-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .memory-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .memory-empty {
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: #faf9fd;
+      color: var(--text-muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .memory-item {
+      width: 100%;
+      padding: 11px 12px;
+      border-radius: 12px;
+      background: #faf9fd;
+      border: 1px solid var(--purple-tint);
+      text-align: left;
+    }
+
+    .memory-item:hover,
+    .mini-btn:hover,
+    .favorite-toggle:hover,
+    .action-btn:hover,
+    .loc-btn:hover {
+      opacity: 0.92;
+    }
+
+    .memory-item-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .memory-title {
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.4;
+    }
+
+    .memory-meta {
+      color: var(--text-muted);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .memory-badge {
+      flex-shrink: 0;
+      padding: 3px 7px;
+      border-radius: 999px;
+      background: var(--white);
+      color: var(--purple);
+      font-size: 10px;
+      font-weight: 700;
+      border: 1px solid var(--purple-border);
+    }
+
     #wheel-section {
       padding: 16px;
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 14px;
-      flex: 1;
     }
-    #wheel-wrap { position: relative; width: 180px; height: 180px; }
+
+    #search-progress {
+      min-height: 16px;
+      max-width: 280px;
+      color: var(--text-muted);
+      font-size: 11px;
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    #wheel-wrap {
+      width: 240px;
+      height: 240px;
+      position: relative;
+    }
+
     #wheel-canvas {
-      border-radius: 50%;
-      box-shadow: 0 6px 24px rgba(126,105,182,0.28);
       display: block;
+      width: 240px;
+      height: 240px;
+      border-radius: 50%;
+      box-shadow: 0 6px 24px rgba(126, 105, 182, 0.28);
     }
+
     #wheel-pointer {
       position: absolute;
-      top: -6px;
+      top: -10px;
       left: 50%;
       transform: translateX(-50%);
       z-index: 2;
+      color: var(--purple);
     }
+
     #spin-btn {
       display: flex;
       align-items: center;
       gap: 7px;
+      padding: 11px 32px;
+      border-radius: 999px;
       background: var(--purple);
       color: var(--white);
-      border: none;
-      padding: 11px 32px;
-      border-radius: 50px;
       font-size: 14px;
       font-weight: 700;
-      cursor: pointer;
-      box-shadow: 0 5px 16px rgba(126,105,182,0.38);
-      transition: opacity 0.15s;
+      box-shadow: 0 5px 16px rgba(126, 105, 182, 0.38);
     }
-    #spin-btn:hover { opacity: 0.9; }
-    #spin-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    /* === Right Panel === */
-    #right-panel { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-    #map-container { flex: 1; position: relative; min-height: 0; }
-    #map { width: 100%; height: 100%; }
+    #search-btn:disabled,
+    #spin-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
 
-    /* Map overlay */
+    #right-panel {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #map-container {
+      flex: 1;
+      min-height: 0;
+      position: relative;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+
     #map-overlay {
       position: absolute;
       top: 12px;
@@ -256,635 +573,1857 @@
       align-items: flex-start;
       pointer-events: none;
       z-index: 5;
+      gap: 10px;
     }
-    #map-badge {
-      background: rgba(255,255,255,0.95);
-      border-radius: 8px;
-      padding: 6px 10px;
-      font-size: 11px;
-      color: var(--purple);
-      font-weight: 600;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+
+    #map-badge,
+    #map-hint {
       display: flex;
       align-items: center;
       gap: 5px;
+      padding: 7px 10px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    #map-badge {
+      background: rgba(255, 255, 255, 0.95);
+      color: var(--purple);
       pointer-events: all;
     }
+
     #map-hint {
-      background: rgba(126,105,182,0.92);
-      color: var(--white);
-      border-radius: 8px;
-      padding: 6px 10px;
-      font-size: 11px;
-      font-weight: 600;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
       display: none;
-      align-items: center;
-      gap: 5px;
+      background: rgba(126, 105, 182, 0.94);
+      color: var(--white);
     }
+
     #map-hint.visible { display: flex; }
 
-    /* === Result Strip === */
-    #result-strip {
-      background: var(--white);
-      border-top: 1px solid var(--purple-border);
-      padding: 14px 16px;
-      display: flex;
-      gap: 12px;
+    #api-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 13, 24, 0.45);
+      display: none;
       align-items: center;
-      flex-shrink: 0;
+      justify-content: center;
+      z-index: 40;
+      padding: 16px;
+    }
+
+    #api-modal.visible { display: flex; }
+
+    .api-modal-card {
+      width: min(620px, 100%);
+      max-height: min(86vh, 780px);
+      overflow-y: auto;
+      border-radius: 16px;
+      background: #ffffff;
+      border: 1px solid var(--purple-border);
+      box-shadow: 0 20px 48px rgba(31, 25, 48, 0.26);
+      padding: 18px;
+    }
+
+    .api-modal-title {
+      color: var(--text);
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .api-modal-desc {
+      color: var(--text-muted);
+      font-size: 13px;
+      line-height: 1.6;
+      margin-bottom: 10px;
+    }
+
+    .api-local-note {
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: #faf9fd;
+      color: var(--purple);
+      border: 1px solid var(--purple-border);
+      font-size: 12px;
+      line-height: 1.5;
+      font-weight: 700;
+    }
+
+    .api-input {
+      width: 100%;
+      border: 1.5px solid var(--purple-border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 13px;
+      outline: none;
+      background: #ffffff;
+      margin-bottom: 8px;
+    }
+
+    .api-input:focus { border-color: var(--purple); }
+
+    #api-key-error {
+      min-height: 16px;
+      color: var(--danger);
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    .api-guide {
+      margin-top: 6px;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid var(--purple-tint);
+      background: #faf9fd;
+    }
+
+    .api-guide-title {
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .api-guide ol {
+      margin-left: 18px;
+      color: var(--text-muted);
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    .api-guide a {
+      color: var(--purple);
+      text-decoration: underline;
+    }
+
+    .api-actions {
+      margin-top: 14px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    #result-strip {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border-top: 1px solid var(--purple-border);
+      background: var(--white);
       transform: translateY(100%);
       transition: transform 0.3s ease;
+      flex-shrink: 0;
     }
+
     #result-strip.visible { transform: translateY(0); }
-    #result-info { flex: 1; min-width: 0; }
-    #result-name { font-size: 15px; font-weight: 800; color: var(--text); margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    #result-meta { display: flex; gap: 10px; font-size: 12px; color: var(--text-muted); flex-wrap: wrap; }
-    #result-meta span { display: flex; align-items: center; gap: 3px; }
-    #result-actions { display: flex; gap: 8px; flex-shrink: 0; }
-    .action-btn {
-      display: flex; align-items: center; gap: 5px;
-      padding: 8px 14px; border-radius: 8px;
-      font-size: 12px; font-weight: 600; cursor: pointer; border: none;
-      white-space: nowrap; font-family: inherit;
+
+    #result-info {
+      flex: 1;
+      min-width: 0;
     }
-    .action-btn.primary { background: var(--purple); color: var(--white); }
-    .action-btn.secondary { background: var(--purple-tint); color: var(--purple); }
-    .action-btn:hover { opacity: 0.9; }
+
+    #result-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 5px;
+    }
+
+    #result-name {
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    #result-name a {
+      color: inherit;
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+    }
+
+    #result-name a:hover {
+      color: var(--purple);
+      border-bottom-color: currentColor;
+    }
+
+    .favorite-toggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      background: #faf9fd;
+      color: var(--purple);
+      flex-shrink: 0;
+      border: 1px solid var(--purple-border);
+      align-self: center;
+    }
+
+    .favorite-toggle.active {
+      background: rgba(245, 158, 11, 0.15);
+      color: #d08908;
+      border-color: rgba(245, 158, 11, 0.35);
+    }
+
+    #result-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    #result-meta span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    #result-actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .action-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      white-space: nowrap;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .action-btn.primary {
+      background: var(--purple);
+      color: var(--white);
+    }
+
+    .action-btn.secondary {
+      background: var(--purple-tint);
+      color: var(--purple);
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .icon-spin { animation: spin 0.8s linear infinite; }
+
+    @media (max-width: 980px) {
+      html, body { overflow: auto; }
+      #app { height: auto; min-height: 100vh; }
+      #main { flex-direction: column; }
+      #sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--purple-border);
+      }
+      #map-container { min-height: 52vh; }
+      #result-strip {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      #result-actions {
+        width: 100%;
+      }
+      .action-btn {
+        flex: 1;
+        justify-content: center;
+      }
+    }
   </style>
 </head>
 <body>
-<div id="app">
-  <nav id="nav">
-    <div id="nav-brand">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20A14.5 14.5 0 0 0 12 2"/><path d="M2 12h20"/></svg>
-      今天吃<span>什麼？</span>
-    </div>
-  </nav>
-  <div id="main">
-    <div id="sidebar">
-      <!-- Location -->
-      <div class="sb-section">
-        <div class="sb-label">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-          搜尋中心位置
-        </div>
-        <div class="loc-input-wrap">
-          <input id="loc-input" type="text" placeholder="輸入地址或地點名稱…">
-          <span class="loc-input-icon" id="loc-search-icon">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          </span>
-        </div>
-        <div class="loc-methods">
-          <button class="loc-btn primary" id="btn-my-loc">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
-            使用我的位置
-          </button>
-          <button class="loc-btn secondary" id="btn-click-map">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
-            點地圖選擇
-          </button>
-        </div>
-        <div id="loc-error"></div>
+  <div id="app">
+    <nav id="nav">
+      <div id="nav-brand">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M12 2a14.5 14.5 0 0 0 0 20A14.5 14.5 0 0 0 12 2"></path>
+          <path d="M2 12h20"></path>
+        </svg>
+        吃什麼<span>轉盤</span>
       </div>
-
-      <!-- Distance -->
-      <div class="sb-section">
-        <div class="sb-label">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-          搜尋距離
-        </div>
-        <div class="slider-row">
-          <input type="range" id="radius-slider" min="0" max="3" value="1" step="1">
-          <span id="radius-val">1 km</span>
-        </div>
-        <div class="slider-ticks">
-          <span>500m</span><span>1 km</span><span>2 km</span><span>5 km</span>
-        </div>
-      </div>
-
-      <!-- Cuisine -->
-      <div class="sb-section">
-        <div class="sb-label">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3v7"/></svg>
-          料理類型（可多選）
-        </div>
-        <div id="chips-wrap">
-          <button class="chip active" data-value="" type="button">全部</button>
-          <button class="chip" data-value="日式料理" type="button">日式</button>
-          <button class="chip" data-value="中式料理" type="button">中式</button>
-          <button class="chip" data-value="西式料理" type="button">西式</button>
-          <button class="chip" data-value="火鍋" type="button">火鍋</button>
-          <button class="chip" data-value="燒烤" type="button">燒烤</button>
-          <button class="chip" data-value="咖啡廳" type="button">咖啡廳</button>
-          <input id="chip-custom" type="text" placeholder="自訂…">
-        </div>
-      </div>
-
-      <!-- Search -->
-      <div class="sb-section">
-        <button id="search-btn" disabled>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          搜尋附近餐廳
+      <div id="nav-actions">
+        <button id="settings-btn" type="button" aria-label="設定 Google API Key">
+          <i data-lucide="settings" aria-hidden="true"></i>
+          API 設定
         </button>
       </div>
+    </nav>
 
-      <!-- Wheel -->
-      <div id="wheel-section">
-        <div class="sb-label" style="align-self:flex-start;">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
-          <span id="wheel-label">轉盤（尚未搜尋）</span>
+    <div id="main">
+      <div id="sidebar">
+        <div class="sb-section">
+          <div class="sb-label">
+            <i data-lucide="map-pin" aria-hidden="true"></i>
+            搜尋中心地點
+          </div>
+          <div class="loc-input-wrap">
+            <input id="loc-input" type="text" placeholder="輸入地址、捷運站或地標">
+            <span class="loc-input-icon" id="loc-search-icon" aria-label="搜尋地點">
+              <i data-lucide="search" aria-hidden="true"></i>
+            </span>
+          </div>
+          <div class="loc-methods">
+            <button class="loc-btn primary" id="btn-my-loc" type="button">
+              <i data-lucide="locate-fixed" aria-hidden="true"></i>
+              使用我的位置
+            </button>
+            <button class="loc-btn secondary" id="btn-click-map" type="button">
+              <i data-lucide="mouse-pointer-click" aria-hidden="true"></i>
+              點地圖選位置
+            </button>
+          </div>
+          <div class="helper-text" id="last-saved-note">尚未儲存最近一次搜尋位置。</div>
+          <div id="loc-error"></div>
         </div>
-        <div id="wheel-wrap">
-          <svg id="wheel-pointer" width="20" height="20" viewBox="0 0 20 20" style="color:var(--purple)">
-            <polygon points="10,2 17,17 3,17" fill="currentColor"/>
-          </svg>
-          <canvas id="wheel-canvas" width="180" height="180"></canvas>
-        </div>
-        <button id="spin-btn" disabled>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
-          開始抽籤
-        </button>
-      </div>
-    </div>
 
-    <div id="right-panel">
-      <div id="map-container">
-        <div id="map"></div>
-        <div id="map-overlay">
-          <div id="map-badge">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-            <span id="badge-text">尚未設定位置</span>
+        <div class="sb-section">
+          <div class="sb-label">
+            <i data-lucide="clock-3" aria-hidden="true"></i>
+            搜尋半徑
           </div>
-          <div id="map-hint">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-            點地圖任意位置來設定搜尋中心
+          <div class="slider-row">
+            <div class="slider-track-wrap">
+              <input type="range" id="radius-slider" min="0" max="7" value="3" step="1">
+              <div class="slider-ticks">
+                <span>250m</span>
+                <span>500m</span>
+                <span>750m</span>
+                <span>1 km</span>
+                <span>1.5 km</span>
+                <span>2 km</span>
+                <span>3 km</span>
+                <span>5 km</span>
+              </div>
+            </div>
+            <span id="radius-val">1 km</span>
           </div>
+        </div>
+
+        <div class="sb-section">
+          <div class="sb-label">
+            <i data-lucide="wallet" aria-hidden="true"></i>
+            價格上限
+          </div>
+          <div class="slider-row">
+            <div class="slider-track-wrap">
+              <input type="range" id="price-slider" min="0" max="4" value="0" step="1">
+              <div class="slider-ticks">
+                <span>不限</span>
+                <span>$</span>
+                <span>$$</span>
+                <span>$$$</span>
+                <span>$$$$</span>
+              </div>
+            </div>
+            <span id="price-val">不限</span>
+          </div>
+        </div>
+
+        <div class="sb-section">
+          <div class="sb-label">
+            <i data-lucide="store" aria-hidden="true"></i>
+            營業狀態
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-copy">
+              <div class="toggle-title">只看營業中</div>
+              <div class="toggle-desc">搜尋時自動排除目前休息中的店家</div>
+            </div>
+            <label class="toggle-switch" for="open-now-toggle">
+              <input id="open-now-toggle" type="checkbox">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="sb-section">
+          <div class="sb-label">
+            <i data-lucide="utensils-crossed" aria-hidden="true"></i>
+            餐廳類型與關鍵字
+          </div>
+          <div id="chips-wrap">
+            <button class="chip active" data-value="" type="button">全部</button>
+            <button class="chip" data-value="火鍋" type="button">火鍋</button>
+            <button class="chip" data-value="日本料理" type="button">日料</button>
+            <button class="chip" data-value="韓式料理" type="button">韓式</button>
+            <button class="chip" data-value="早午餐" type="button">早午餐</button>
+            <button class="chip" data-value="咖啡" type="button">咖啡</button>
+            <button class="chip" data-value="麵食" type="button">麵食</button>
+            <input id="chip-custom" type="text" placeholder="自訂">
+          </div>
+        </div>
+
+        <div class="sb-section">
+          <button id="search-btn" type="button" disabled>
+            <i data-lucide="search" aria-hidden="true"></i>
+            搜尋附近餐廳
+          </button>
+        </div>
+
+        <div id="wheel-section">
+          <div class="sb-label" style="align-self: flex-start;">
+            <i data-lucide="rotate-cw" aria-hidden="true"></i>
+            <span id="wheel-label">先搜尋餐廳再開始轉盤</span>
+          </div>
+          <div id="search-progress"></div>
+          <div id="wheel-wrap">
+            <svg id="wheel-pointer" width="24" height="24" viewBox="0 0 24 24">
+              <polygon points="12,22 21,4 3,4" fill="currentColor"></polygon>
+            </svg>
+            <canvas id="wheel-canvas" width="240" height="240"></canvas>
+          </div>
+          <button id="spin-btn" type="button" disabled>
+            <i data-lucide="sparkles" aria-hidden="true"></i>
+            開始轉盤
+          </button>
+        </div>
+
+        <div class="sb-section">
+          <div class="memory-head">
+            <div class="sb-label" style="margin-bottom: 0;">
+              <i data-lucide="star" aria-hidden="true"></i>
+              收藏
+            </div>
+            <div class="memory-actions">
+              <button class="mini-btn" id="clear-favorites-btn" type="button">
+                <i data-lucide="trash-2" aria-hidden="true"></i>
+                清空
+              </button>
+            </div>
+          </div>
+          <div class="memory-list" id="favorites-list"></div>
+        </div>
+
+        <div class="sb-section">
+          <div class="memory-head">
+            <div class="sb-label" style="margin-bottom: 0;">
+              <i data-lucide="history" aria-hidden="true"></i>
+              歷史紀錄
+            </div>
+            <div class="memory-actions">
+              <button class="mini-btn" id="clear-history-btn" type="button">
+                <i data-lucide="trash-2" aria-hidden="true"></i>
+                清空
+              </button>
+            </div>
+          </div>
+          <div class="memory-list" id="history-list"></div>
         </div>
       </div>
-      <div id="result-strip">
-        <div id="result-info">
-          <div id="result-name">—</div>
-          <div id="result-meta">
-            <span id="result-rating"></span>
-            <span id="result-addr"></span>
-            <span id="result-dist"></span>
+
+      <div id="right-panel">
+        <div id="map-container">
+          <div id="map"></div>
+          <div id="map-overlay">
+            <div id="map-badge">
+              <i data-lucide="map-pin" aria-hidden="true"></i>
+              <span id="badge-text">請先設定搜尋中心</span>
+            </div>
+            <div id="map-hint">
+              <i data-lucide="mouse-pointer-click" aria-hidden="true"></i>
+              點一下地圖來設定搜尋中心
+            </div>
           </div>
         </div>
-        <div id="result-actions">
-          <button class="action-btn secondary" id="btn-retry">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
-            再抽
-          </button>
-          <button class="action-btn primary" id="btn-navigate">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 19-9-9 19-2-8-8-2z"/></svg>
-            Google Maps 導航
-          </button>
+
+        <div id="result-strip">
+          <div id="result-info">
+            <div id="result-head">
+              <div id="result-name"></div>
+              <button class="favorite-toggle" id="favorite-toggle" type="button" aria-label="加入收藏">
+                <i data-lucide="star" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div id="result-meta">
+              <span id="result-rating"></span>
+              <span id="result-addr"></span>
+              <span id="result-dist"></span>
+            </div>
+          </div>
+          <div id="result-actions">
+            <button class="action-btn primary" id="btn-navigate" type="button">
+              <i data-lucide="navigation" aria-hidden="true"></i>
+              打開店家地圖
+            </button>
+          </div>
         </div>
       </div>
     </div>
   </div>
-</div>
 
-<script>
-// ── State ──
-const state = {
-  center: null,
-  radiusMeters: 1000,
-  keywords: [],
-  places: [],
-  spinning: false,
-  clickMapMode: false,
-};
+  <div id="api-modal" aria-hidden="true">
+    <div class="api-modal-card" role="dialog" aria-modal="true" aria-labelledby="api-modal-title">
+      <div class="api-modal-title" id="api-modal-title">Google API Key 設定</div>
+      <div class="api-modal-desc">請輸入可用於 Maps JavaScript API 與 Places API 的金鑰。</div>
+      <div class="api-local-note">此 API Key 只會儲存在你的瀏覽器本地 localStorage，不會上傳到任何伺服器。</div>
+      <input id="api-key-input" class="api-input" type="text" placeholder="貼上 API Key，例如 AIza..." autocomplete="off">
+      <div id="api-key-error"></div>
 
-// ── Constants ──
-const RADIUS_VALUES = [500, 1000, 2000, 5000];
-const RADIUS_LABELS = ['500m', '1 km', '2 km', '5 km'];
-const WHEEL_COLORS = ['#7e69b6', '#9b87cc', '#baaee0'];
+      <div class="api-guide">
+        <div class="api-guide-title">如何建立 API Key</div>
+        <ol>
+          <li>進入 <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer">Google Cloud Console 憑證頁</a>。</li>
+          <li>建立專案或選擇既有專案，啟用 Maps JavaScript API 與 Places API。</li>
+          <li>建立 API Key，將新 key 貼到此欄位後按「儲存並套用」。</li>
+        </ol>
+      </div>
 
-// ── Map module globals ──
-let map, centerMarker, searchCircle, placeMarkers = [], infoWindow, geocoder;
+      <div class="api-actions">
+        <button class="action-btn secondary" id="api-cancel-btn" type="button">取消</button>
+        <button class="action-btn primary" id="api-save-btn" type="button">儲存並套用</button>
+      </div>
+    </div>
+  </div>
 
-// ── Wheel globals ──
-let wheelAngle = 0;
+  <script>
+    const STORAGE_KEYS = {
+      prefs: "food-roulette:prefs",
+      favorites: "food-roulette:favorites",
+      history: "food-roulette:history",
+      mapsApiKey: "food-roulette:maps-api-key",
+    };
 
-// ── initMap (Google Maps callback) ──
-function initMap() {
-  map = new google.maps.Map(document.getElementById('map'), {
-    center: { lat: 25.0338, lng: 121.5654 },
-    zoom: 14,
-    mapTypeControl: false,
-    streetViewControl: false,
-    fullscreenControl: false,
-    styles: [{ featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] }],
-  });
+    const MAX_HISTORY = 12;
+    const MAX_FAVORITES = 30;
+    const RADIUS_VALUES = [250, 500, 750, 1000, 1500, 2000, 3000, 5000];
+    const RADIUS_LABELS = ["250m", "500m", "750m", "1 km", "1.5 km", "2 km", "3 km", "5 km"];
+    const PRICE_LABELS = ["不限", "$", "$$", "$$$", "$$$$"];
+    const WHEEL_COLORS = ["#7e69b6", "#9b87cc", "#baaee0", "#8f78c7"];
 
-  infoWindow = new google.maps.InfoWindow();
-  geocoder = new google.maps.Geocoder();
+    const state = {
+      center: null,
+      radiusMeters: 1000,
+      maxPriceLevel: null,
+      openNow: false,
+      keywords: [],
+      places: [],
+      favorites: [],
+      history: [],
+      selectedPlace: null,
+      spinning: false,
+      clickMapMode: false,
+    };
 
-  map.addListener('click', (e) => {
-    if (!state.clickMapMode) return;
-    setCenter(e.latLng);
-    exitClickMapMode();
-  });
+    let map;
+    let centerMarker;
+    let focusedPlaceMarker;
+    let searchCircle;
+    let placeMarkers = [];
+    let infoWindow;
+    let geocoder;
+    let wheelAngle = 0;
+    let searchToken = 0;
+    let activeSearchBounds = null;
+    let activeSearchLoadedCount = 0;
+    let activeSearchSawNextPage = false;
+    const placeIconCache = new Map();
 
-  lucide.createIcons();
-  initLocationControls();
-  initControls();
-  initSearch();
-  initResult();
-  drawWheel([]); // empty placeholder
-}
+    const SEARCH_BTN_DEFAULT = `
+      <i data-lucide="search" aria-hidden="true"></i>
+      搜尋附近餐廳
+    `;
 
-// ── Map helpers ──
-function setCenter(latLng) {
-  state.center = latLng;
-  if (centerMarker) {
-    centerMarker.setPosition(latLng);
-  } else {
-    centerMarker = new google.maps.Marker({
-      position: latLng,
-      map,
-      draggable: true,
-      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#7e69b6', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 },
-      title: '搜尋中心',
-      zIndex: 10,
-    });
-    centerMarker.addListener('dragend', (e) => {
-      state.center = e.latLng;
-      updateSearchCircle();
-      reverseGeocode(e.latLng);
-    });
-  }
-  updateSearchCircle();
-  reverseGeocode(latLng);
-}
+    const SEARCH_BTN_LOADING = `
+      <svg class="icon-spin" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path>
+        <path d="M21 3v5h-5"></path>
+      </svg>
+      搜尋中
+    `;
 
-function updateSearchCircle() {
-  if (!state.center) return;
-  if (searchCircle) {
-    searchCircle.setCenter(state.center);
-    searchCircle.setRadius(state.radiusMeters);
-  } else {
-    searchCircle = new google.maps.Circle({
-      map, center: state.center, radius: state.radiusMeters,
-      fillColor: '#7e69b6', fillOpacity: 0.08,
-      strokeColor: '#7e69b6', strokeOpacity: 0.4, strokeWeight: 1.5,
-    });
-  }
-}
+    const GOOGLE_MAPS_SCRIPT_ID = "google-maps-api-script";
+    let mapsScriptLoading = false;
 
-function reverseGeocode(latLng) {
-  geocoder.geocode({ location: latLng }, (results, status) => {
-    document.getElementById('loc-input').value =
-      (status === 'OK' && results[0])
-        ? results[0].formatted_address
-        : `${latLng.lat().toFixed(4)}, ${latLng.lng().toFixed(4)}`;
-    updateBadge();
-  });
-}
+    function renderIcons() {
+      if (window.lucide) lucide.createIcons();
+    }
 
-function updateBadge() {
-  const idx = RADIUS_VALUES.indexOf(state.radiusMeters);
-  const radiusLabel = RADIUS_LABELS[idx !== -1 ? idx : 1];
-  const count = state.places.length;
-  const addr = (document.getElementById('loc-input').value || '已設定位置').split(',')[0];
-  document.getElementById('badge-text').textContent =
-    count > 0 ? `${addr} · ${radiusLabel} · ${count} 家` : addr;
-}
-
-function clearPlaceMarkers() {
-  placeMarkers.forEach(m => m.setMap(null));
-  placeMarkers = [];
-  if (infoWindow) infoWindow.close();
-}
-
-function enterClickMapMode() {
-  if (!map) return;
-  state.clickMapMode = true;
-  document.getElementById('map-hint').classList.add('visible');
-  document.getElementById('btn-click-map').classList.add('active');
-  map.setOptions({ draggableCursor: 'crosshair' });
-}
-
-function exitClickMapMode() {
-  if (!map) return;
-  state.clickMapMode = false;
-  document.getElementById('map-hint').classList.remove('visible');
-  document.getElementById('btn-click-map').classList.remove('active');
-  map.setOptions({ draggableCursor: null });
-}
-
-// ── Location module ──
-function initLocationControls() {
-  const locInput = document.getElementById('loc-input');
-
-  function showLocError(msg) {
-    const el = document.getElementById('loc-error');
-    el.textContent = msg;
-    el.classList.add('visible');
-    setTimeout(() => el.classList.remove('visible'), 4000);
-  }
-
-  function geocodeAddress() {
-    const addr = locInput.value.trim();
-    if (!addr) return;
-    geocoder.geocode({ address: addr }, (results, status) => {
-      if (status === 'OK') {
-        const latLng = results[0].geometry.location;
-        map.panTo(latLng);
-        map.setZoom(14);
-        setCenter(latLng);
-        document.getElementById('search-btn').disabled = false;
-      } else {
-        showLocError('找不到該地址，請重新輸入。');
+    function safeJsonParse(value, fallback) {
+      try {
+        return value ? JSON.parse(value) : fallback;
+      } catch {
+        return fallback;
       }
-    });
-  }
+    }
 
-  locInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') geocodeAddress(); });
-  locInput.addEventListener('input', () => {
-    if (!locInput.value.trim()) document.getElementById('search-btn').disabled = true;
-  });
-  document.getElementById('loc-search-icon').addEventListener('click', geocodeAddress);
+    function storageAvailable() {
+      try {
+        const key = "__food_roulette_test__";
+        localStorage.setItem(key, "1");
+        localStorage.removeItem(key);
+        return true;
+      } catch {
+        return false;
+      }
+    }
 
-  document.getElementById('btn-my-loc').addEventListener('click', () => {
-    if (!navigator.geolocation) { showLocError('瀏覽器不支援定位'); return; }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const latLng = new google.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
-        map.panTo(latLng); map.setZoom(14);
-        setCenter(latLng);
-        document.getElementById('search-btn').disabled = false;
-      },
-      () => showLocError('無法取得位置，請確認瀏覽器定位權限。')
-    );
-  });
+    const canUseStorage = storageAvailable();
 
-  document.getElementById('btn-click-map').addEventListener('click', () => {
-    state.clickMapMode ? exitClickMapMode() : enterClickMapMode();
-  });
-}
+    function loadPrefs() {
+      return canUseStorage ? safeJsonParse(localStorage.getItem(STORAGE_KEYS.prefs), null) : null;
+    }
 
-// ── Controls module ──
-function initControls() {
-  const slider = document.getElementById('radius-slider');
-  const valEl = document.getElementById('radius-val');
+    function savePrefs() {
+      if (!canUseStorage) return;
+      const address = document.getElementById("loc-input").value.trim();
+      const payload = {
+        radiusMeters: state.radiusMeters,
+        maxPriceLevel: state.maxPriceLevel,
+        openNow: state.openNow,
+        keywords: [...state.keywords],
+        address,
+        center: state.center ? { lat: state.center.lat(), lng: state.center.lng() } : null,
+        updatedAt: Date.now(),
+      };
+      localStorage.setItem(STORAGE_KEYS.prefs, JSON.stringify(payload));
+      updateSavedNote(payload);
+    }
 
-  function updateRadius() {
-    const idx = parseInt(slider.value);
-    state.radiusMeters = RADIUS_VALUES[idx];
-    valEl.textContent = RADIUS_LABELS[idx];
-    const pct = (idx / 3) * 100;
-    slider.style.background = `linear-gradient(to right, var(--purple) ${pct}%, var(--purple-border) ${pct}%)`;
-    updateSearchCircle();
-    updateBadge();
-  }
+    function loadFavorites() {
+      return canUseStorage ? safeJsonParse(localStorage.getItem(STORAGE_KEYS.favorites), []) : [];
+    }
 
-  slider.addEventListener('input', updateRadius);
-  updateRadius();
+    function saveFavorites() {
+      if (!canUseStorage) return;
+      localStorage.setItem(STORAGE_KEYS.favorites, JSON.stringify(state.favorites));
+    }
 
-  const chipsWrap = document.getElementById('chips-wrap');
-  chipsWrap.addEventListener('click', (e) => {
-    const chip = e.target.closest('button.chip');
-    if (!chip) return;
-    const allChips = chipsWrap.querySelectorAll('button.chip');
-    if (chip.dataset.value === '') {
-      allChips.forEach(c => c.classList.remove('active'));
-      chip.classList.add('active');
+    function loadHistory() {
+      return canUseStorage ? safeJsonParse(localStorage.getItem(STORAGE_KEYS.history), []) : [];
+    }
+
+    function saveHistory() {
+      if (!canUseStorage) return;
+      localStorage.setItem(STORAGE_KEYS.history, JSON.stringify(state.history));
+    }
+
+    function updateSavedNote(prefs = loadPrefs()) {
+      const note = document.getElementById("last-saved-note");
+      if (!prefs || !prefs.center) {
+        note.textContent = "尚未儲存最近一次搜尋位置。";
+        return;
+      }
+
+      const address = prefs.address || `${prefs.center.lat.toFixed(4)}, ${prefs.center.lng.toFixed(4)}`;
+      const idx = RADIUS_VALUES.indexOf(prefs.radiusMeters);
+      const radiusLabel = RADIUS_LABELS[idx === -1 ? 3 : idx];
+      note.textContent = `已記住上次位置：${address} · ${radiusLabel}`;
+    }
+
+    function updateSearchAvailability() {
+      document.getElementById("search-btn").disabled = !state.center;
+    }
+
+    function setSearchButtonLoading(isLoading) {
+      const btn = document.getElementById("search-btn");
+      btn.innerHTML = isLoading ? SEARCH_BTN_LOADING : SEARCH_BTN_DEFAULT;
+      renderIcons();
+    }
+
+    function setSearchProgress(message = "") {
+      const el = document.getElementById("search-progress");
+      el.textContent = message;
+    }
+
+    function loadStoredMapsApiKey() {
+      if (!canUseStorage) return "";
+      return localStorage.getItem(STORAGE_KEYS.mapsApiKey) || "";
+    }
+
+    function saveMapsApiKey(apiKey) {
+      if (!canUseStorage) return;
+      localStorage.setItem(STORAGE_KEYS.mapsApiKey, apiKey);
+    }
+
+    function openApiModal(prefill = loadStoredMapsApiKey()) {
+      const modal = document.getElementById("api-modal");
+      const input = document.getElementById("api-key-input");
+      const err = document.getElementById("api-key-error");
+      err.textContent = "";
+      input.value = prefill;
+      modal.classList.add("visible");
+      modal.setAttribute("aria-hidden", "false");
+      setTimeout(() => input.focus(), 0);
+    }
+
+    function closeApiModal() {
+      const modal = document.getElementById("api-modal");
+      modal.classList.remove("visible");
+      modal.setAttribute("aria-hidden", "true");
+    }
+
+    function loadGoogleMapsApi(apiKey) {
+      if (!apiKey) {
+        openApiModal();
+        return;
+      }
+
+      if (window.google && window.google.maps) {
+        if (!map) initMap();
+        return;
+      }
+
+      if (mapsScriptLoading || document.getElementById(GOOGLE_MAPS_SCRIPT_ID)) return;
+
+      mapsScriptLoading = true;
+      const script = document.createElement("script");
+      script.id = GOOGLE_MAPS_SCRIPT_ID;
+      script.async = true;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=places&callback=initMap`;
+      script.onerror = () => {
+        mapsScriptLoading = false;
+        document.getElementById("api-key-error").textContent = "API Key 載入失敗，請確認 key、API 啟用狀態與網域限制。";
+        openApiModal(apiKey);
+      };
+      document.body.appendChild(script);
+    }
+
+    function initApiSettings() {
+      const settingsBtn = document.getElementById("settings-btn");
+      const modal = document.getElementById("api-modal");
+      const saveBtn = document.getElementById("api-save-btn");
+      const cancelBtn = document.getElementById("api-cancel-btn");
+      const input = document.getElementById("api-key-input");
+      const err = document.getElementById("api-key-error");
+
+      settingsBtn.addEventListener("click", () => openApiModal());
+      cancelBtn.addEventListener("click", closeApiModal);
+      modal.addEventListener("click", (event) => {
+        if (event.target === modal) closeApiModal();
+      });
+
+      saveBtn.addEventListener("click", () => {
+        const apiKey = input.value.trim();
+        if (!apiKey) {
+          err.textContent = "請先輸入 API Key。";
+          return;
+        }
+
+        saveMapsApiKey(apiKey);
+        closeApiModal();
+
+        if (window.google && window.google.maps && map) {
+          window.location.reload();
+          return;
+        }
+
+        loadGoogleMapsApi(apiKey);
+      });
+    }
+
+    function showLocError(message) {
+      const el = document.getElementById("loc-error");
+      el.textContent = message;
+      el.classList.add("visible");
+      clearTimeout(showLocError.timer);
+      showLocError.timer = setTimeout(() => el.classList.remove("visible"), 4000);
+    }
+
+    function setCenter(latLng, options = {}) {
+      const {
+        updateAddress = true,
+        addressText = "",
+        pan = false,
+        zoom = false,
+        persist = true,
+      } = options;
+
+      state.center = latLng;
+
+      if (!centerMarker) {
+        centerMarker = new google.maps.Marker({
+          map,
+          draggable: true,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 10,
+            fillColor: "#7e69b6",
+            fillOpacity: 1,
+            strokeColor: "#ffffff",
+            strokeWeight: 2,
+          },
+          title: "搜尋中心",
+          zIndex: 10,
+        });
+
+        centerMarker.addListener("dragend", (event) => {
+          setCenter(event.latLng, { updateAddress: true, persist: true });
+        });
+      }
+
+      centerMarker.setPosition(latLng);
+      updateSearchCircle();
+      updateSearchAvailability();
+
+      if (pan) map.panTo(latLng);
+      if (zoom) map.setZoom(14);
+
+      if (updateAddress) {
+        reverseGeocode(latLng, persist);
+      } else {
+        if (addressText) document.getElementById("loc-input").value = addressText;
+        updateBadge();
+        if (persist) savePrefs();
+      }
+    }
+
+    function updateSearchCircle() {
+      if (!state.center) return;
+
+      if (!searchCircle) {
+        searchCircle = new google.maps.Circle({
+          map,
+          fillColor: "#7e69b6",
+          fillOpacity: 0.08,
+          strokeColor: "#7e69b6",
+          strokeOpacity: 0.4,
+          strokeWeight: 1.5,
+        });
+      }
+
+      searchCircle.setCenter(state.center);
+      searchCircle.setRadius(state.radiusMeters);
+    }
+
+    function reverseGeocode(latLng, persist = true) {
+      geocoder.geocode({ location: latLng }, (results, status) => {
+        const value = status === "OK" && results && results[0]
+          ? results[0].formatted_address
+          : `${latLng.lat().toFixed(4)}, ${latLng.lng().toFixed(4)}`;
+        document.getElementById("loc-input").value = value;
+        updateBadge();
+        if (persist) savePrefs();
+      });
+    }
+
+    function updateBadge() {
+      const radiusIdx = RADIUS_VALUES.indexOf(state.radiusMeters);
+      const radiusLabel = RADIUS_LABELS[radiusIdx === -1 ? 3 : radiusIdx];
+      const priceLabel = state.maxPriceLevel == null ? "不限價位" : `價格 ${PRICE_LABELS[state.maxPriceLevel]}`;
+      const rawAddress = document.getElementById("loc-input").value.trim();
+      const address = rawAddress ? rawAddress.split(",")[0] : "請先設定搜尋中心";
+      const count = state.places.length;
+      const statusLabel = state.openNow ? "營業中" : "不限營業";
+
+      document.getElementById("badge-text").textContent = count > 0
+        ? `${address} · ${radiusLabel} · ${priceLabel} · ${statusLabel} · ${count} 間餐廳`
+        : `${address} · ${radiusLabel} · ${priceLabel} · ${statusLabel}`;
+    }
+
+    function clearPlaceMarkers() {
+      placeMarkers.forEach((marker) => marker.setMap(null));
+      placeMarkers = [];
+      activeSearchBounds = null;
+      activeSearchLoadedCount = 0;
+      activeSearchSawNextPage = false;
+      if (focusedPlaceMarker) {
+        focusedPlaceMarker.setMap(null);
+        focusedPlaceMarker = null;
+      }
+      if (infoWindow) infoWindow.close();
+    }
+
+    function enterClickMapMode() {
+      state.clickMapMode = true;
+      document.getElementById("map-hint").classList.add("visible");
+      document.getElementById("btn-click-map").classList.add("active");
+      map.setOptions({ draggableCursor: "crosshair" });
+    }
+
+    function exitClickMapMode() {
+      state.clickMapMode = false;
+      document.getElementById("map-hint").classList.remove("visible");
+      document.getElementById("btn-click-map").classList.remove("active");
+      map.setOptions({ draggableCursor: null });
+    }
+
+    function geocodeAddress() {
+      const address = document.getElementById("loc-input").value.trim();
+      if (!address) return;
+
+      geocoder.geocode({ address }, (results, status) => {
+        if (status !== "OK" || !results || !results[0]) {
+          showLocError("找不到該地址，請重新輸入。");
+          return;
+        }
+
+        const latLng = results[0].geometry.location;
+        setCenter(latLng, {
+          updateAddress: false,
+          addressText: results[0].formatted_address,
+          pan: true,
+          zoom: true,
+          persist: true,
+        });
+      });
+    }
+
+    function updateKeywords() {
+      state.keywords = [...document.querySelectorAll("#chips-wrap .chip.active")]
+        .map((chip) => chip.dataset.value)
+        .filter(Boolean);
+    }
+
+    function applySavedKeywords(keywords) {
+      const chipsWrap = document.getElementById("chips-wrap");
+      const customInput = document.getElementById("chip-custom");
+      const allChip = chipsWrap.querySelector('.chip[data-value=""]');
+      const chips = [...chipsWrap.querySelectorAll(".chip")];
+
+      chipsWrap.querySelectorAll('.chip[data-custom="1"]').forEach((chip) => chip.remove());
+      chips.forEach((chip) => chip.classList.remove("active"));
+
+      if (!Array.isArray(keywords) || keywords.length === 0) {
+        allChip.classList.add("active");
+        updateKeywords();
+        return;
+      }
+
+      keywords.forEach((keyword) => {
+        if (!keyword) return;
+
+        let chip = [...chipsWrap.querySelectorAll(".chip")].find((item) => item.dataset.value === keyword);
+        if (!chip) {
+          chip = document.createElement("button");
+          chip.type = "button";
+          chip.className = "chip";
+          chip.dataset.value = keyword;
+          chip.dataset.custom = "1";
+          chip.textContent = keyword;
+          chipsWrap.insertBefore(chip, customInput);
+        }
+        chip.classList.add("active");
+      });
+
+      updateKeywords();
+    }
+
+    function createStoredPlace(place) {
+      const location = place.geometry && place.geometry.location
+        ? {
+            lat: typeof place.geometry.location.lat === "function" ? place.geometry.location.lat() : place.geometry.location.lat,
+            lng: typeof place.geometry.location.lng === "function" ? place.geometry.location.lng() : place.geometry.location.lng,
+          }
+        : null;
+
+      return {
+        place_id: place.place_id || `custom-${Date.now()}`,
+        name: place.name || "未命名餐廳",
+        vicinity: place.vicinity || place.formatted_address || "",
+        rating: typeof place.rating === "number" ? place.rating : null,
+        user_ratings_total: typeof place.user_ratings_total === "number" ? place.user_ratings_total : null,
+        icon: place.icon || null,
+        geometry: location ? { location } : null,
+        savedAt: Date.now(),
+      };
+    }
+
+    function isFavorite(placeId) {
+      return state.favorites.some((item) => item.place_id === placeId);
+    }
+
+    function toggleFavorite(place = state.selectedPlace) {
+      if (!place || !place.place_id) return;
+
+      const existingIndex = state.favorites.findIndex((item) => item.place_id === place.place_id);
+      if (existingIndex >= 0) {
+        state.favorites.splice(existingIndex, 1);
+      } else {
+        state.favorites.unshift(createStoredPlace(place));
+        state.favorites = state.favorites.slice(0, MAX_FAVORITES);
+      }
+
+      saveFavorites();
+      renderFavorites();
+      syncFavoriteButton();
+    }
+
+    function pushHistory(place) {
+      if (!place || !place.place_id) return;
+
+      const entry = createStoredPlace(place);
+      state.history = state.history.filter((item) => item.place_id !== entry.place_id);
+      state.history.unshift(entry);
+      state.history = state.history.slice(0, MAX_HISTORY);
+      saveHistory();
+      renderHistory();
+    }
+
+    function formatTimestamp(timestamp) {
+      if (!timestamp) return "";
+      const date = new Date(timestamp);
+      const month = `${date.getMonth() + 1}`.padStart(2, "0");
+      const day = `${date.getDate()}`.padStart(2, "0");
+      const hours = `${date.getHours()}`.padStart(2, "0");
+      const minutes = `${date.getMinutes()}`.padStart(2, "0");
+      return `${month}/${day} ${hours}:${minutes}`;
+    }
+
+    function createMemoryItem(item, type) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "memory-item";
+      button.dataset.placeId = item.place_id;
+
+      const label = type === "favorite" ? "收藏" : formatTimestamp(item.savedAt);
+      const rating = typeof item.rating === "number" ? `評分 ${item.rating}` : "未提供評分";
+
+      button.innerHTML = `
+        <div class="memory-item-top">
+          <div class="memory-title">${item.name}</div>
+          <span class="memory-badge">${label}</span>
+        </div>
+        <div class="memory-meta">${item.vicinity || "地址未提供"}</div>
+        <div class="memory-meta">${rating}</div>
+      `;
+
+      button.addEventListener("click", () => focusStoredPlace(item));
+      return button;
+    }
+
+    function renderFavorites() {
+      const list = document.getElementById("favorites-list");
+      list.innerHTML = "";
+
+      if (!state.favorites.length) {
+        list.innerHTML = '<div class="memory-empty">還沒有收藏。轉到喜歡的餐廳後，按結果列右上的星星就會存進來。</div>';
+      } else {
+        state.favorites.forEach((item) => list.appendChild(createMemoryItem(item, "favorite")));
+      }
+
+      document.getElementById("clear-favorites-btn").disabled = state.favorites.length === 0;
+      renderIcons();
+    }
+
+    function renderHistory() {
+      const list = document.getElementById("history-list");
+      list.innerHTML = "";
+
+      if (!state.history.length) {
+        list.innerHTML = '<div class="memory-empty">還沒有歷史紀錄。每次轉到結果後，這裡都會自動記住。</div>';
+      } else {
+        state.history.forEach((item) => list.appendChild(createMemoryItem(item, "history")));
+      }
+
+      document.getElementById("clear-history-btn").disabled = state.history.length === 0;
+      renderIcons();
+    }
+
+    function syncFavoriteButton() {
+      const button = document.getElementById("favorite-toggle");
+      const placeId = state.selectedPlace && state.selectedPlace.place_id;
+      const active = Boolean(placeId && isFavorite(placeId));
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-label", active ? "移除收藏" : "加入收藏");
+    }
+
+    function focusStoredPlace(item) {
+      if (!item || !item.geometry || !item.geometry.location) return;
+
+      const latLng = new google.maps.LatLng(item.geometry.location.lat, item.geometry.location.lng);
+      if (focusedPlaceMarker) {
+        focusedPlaceMarker.setMap(null);
+      }
+
+      focusedPlaceMarker = new google.maps.Marker({
+        map,
+        position: latLng,
+        title: item.name || "已儲存餐廳",
+        icon: createPlaceMarkerIcon(item),
+        zIndex: 20,
+      });
+      map.panTo(latLng);
+      map.setZoom(16);
+
+      showResult({
+        ...item,
+        geometry: { location: latLng },
+      }, -1, focusedPlaceMarker);
+    }
+
+    function getPlacesErrorMessage(status, hasKeyword) {
+      if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
+        return hasKeyword
+          ? "目前條件太嚴格，找不到符合關鍵字的餐廳。"
+          : "附近找不到餐廳，請調整地點或條件。";
+      }
+
+      if (status === google.maps.places.PlacesServiceStatus.REQUEST_DENIED) {
+        return "Places API 被拒絕，請檢查 API Key、Places API 是否啟用，以及網域限制。";
+      }
+
+      if (status === google.maps.places.PlacesServiceStatus.OVER_QUERY_LIMIT) {
+        return "Places API 已達查詢上限，請稍後再試。";
+      }
+
+      if (status === google.maps.places.PlacesServiceStatus.INVALID_REQUEST) {
+        return "搜尋參數有誤，請重新設定條件後再試。";
+      }
+
+      return `餐廳搜尋失敗，目前狀態：${status || "UNKNOWN_ERROR"}`;
+    }
+
+    function collectNearbyResults(service, request) {
+      return new Promise((resolve) => {
+        const collected = [];
+
+        function handlePage(results, status, pagination) {
+          if (status !== google.maps.places.PlacesServiceStatus.OK || !results) {
+            resolve({ results: collected, status });
+            return;
+          }
+
+          collected.push(...results);
+
+          if (pagination && pagination.hasNextPage) {
+            setTimeout(() => pagination.nextPage(), 2000);
+            return;
+          }
+
+          resolve({ results: collected, status });
+        }
+
+        service.nearbySearch(request, handlePage);
+      });
+    }
+
+    function collectNearbyResultsStream(service, request, onPage) {
+      return new Promise((resolve) => {
+        const collected = [];
+
+        function handlePage(results, status, pagination) {
+          if (status !== google.maps.places.PlacesServiceStatus.OK || !results) {
+            resolve({ results: collected, status });
+            return;
+          }
+
+          collected.push(...results);
+          onPage({
+            pageResults: results,
+            collectedResults: [...collected],
+            hasNextPage: Boolean(pagination && pagination.hasNextPage),
+          });
+
+          if (pagination && pagination.hasNextPage) {
+            setTimeout(() => pagination.nextPage(), 2000);
+            return;
+          }
+
+          resolve({ results: collected, status });
+        }
+
+        service.nearbySearch(request, handlePage);
+      });
+    }
+
+    function placeKey(place) {
+      if (place && place.place_id) return place.place_id;
+
+      const location = place && place.geometry && place.geometry.location;
+      if (!location) return place && place.name ? place.name : "unknown";
+
+      const lat = typeof location.lat === "function" ? location.lat() : location.lat;
+      const lng = typeof location.lng === "function" ? location.lng() : location.lng;
+      return `${place.name || "unknown"}|${lat.toFixed(6)},${lng.toFixed(6)}`;
+    }
+
+    function createPlaceMarkerIcon(place) {
+      const iconUrl = place && place.icon ? place.icon : null;
+      if (!iconUrl) {
+        return {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 7,
+          fillColor: "#9b87cc",
+          fillOpacity: 0.9,
+          strokeColor: "#ffffff",
+          strokeWeight: 1.5,
+        };
+      }
+
+      const cached = placeIconCache.get(iconUrl);
+      if (cached) {
+        return {
+          url: cached,
+          scaledSize: new google.maps.Size(34, 34),
+          anchor: new google.maps.Point(17, 17),
+        };
+      }
+
+      return {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 7,
+        fillColor: "#9b87cc",
+        fillOpacity: 0.9,
+        strokeColor: "#ffffff",
+        strokeWeight: 1.5,
+      };
+    }
+
+    async function buildPlaceMarkerIcon(place) {
+      const iconUrl = place && place.icon ? place.icon : null;
+      if (!iconUrl) return createPlaceMarkerIcon(place);
+
+      const cached = placeIconCache.get(iconUrl);
+      if (cached) return {
+        url: cached,
+        scaledSize: new google.maps.Size(34, 34),
+        anchor: new google.maps.Point(17, 17),
+      };
+
+      try {
+        const result = await new Promise((resolve, reject) => {
+          const image = new Image();
+          image.crossOrigin = "anonymous";
+          image.onload = () => resolve(image);
+          image.onerror = () => reject(new Error("icon load failed"));
+          image.src = iconUrl;
+        });
+
+        const canvas = document.createElement("canvas");
+        canvas.width = 34;
+        canvas.height = 34;
+        const ctx = canvas.getContext("2d");
+
+        ctx.clearRect(0, 0, 34, 34);
+        ctx.beginPath();
+        ctx.arc(17, 17, 14, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffffff";
+        ctx.fill();
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = "#7e69b6";
+        ctx.stroke();
+
+        ctx.drawImage(result, 9, 9, 16, 16);
+
+        const dataUrl = canvas.toDataURL("image/png");
+        placeIconCache.set(iconUrl, dataUrl);
+        return {
+          url: dataUrl,
+          scaledSize: new google.maps.Size(34, 34),
+          anchor: new google.maps.Point(17, 17),
+        };
+      } catch {
+        return createPlaceMarkerIcon(place);
+      }
+    }
+
+    function initLocationControls() {
+      const locInput = document.getElementById("loc-input");
+
+      locInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") geocodeAddress();
+      });
+
+      document.getElementById("loc-search-icon").addEventListener("click", geocodeAddress);
+
+      locInput.addEventListener("input", () => {
+        if (!locInput.value.trim()) {
+          state.center = null;
+          state.places = [];
+          state.selectedPlace = null;
+          clearPlaceMarkers();
+          hideResult();
+          document.getElementById("spin-btn").disabled = true;
+          document.getElementById("wheel-label").textContent = "先搜尋餐廳再開始轉盤";
+          drawWheel([]);
+          updateSearchAvailability();
+          updateBadge();
+          savePrefs();
+        }
+      });
+
+      document.getElementById("btn-my-loc").addEventListener("click", () => {
+        if (!navigator.geolocation) {
+          showLocError("瀏覽器不支援定位。");
+          return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const latLng = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+            setCenter(latLng, { updateAddress: true, pan: true, zoom: true, persist: true });
+          },
+          () => showLocError("無法取得位置，請確認瀏覽器定位權限。")
+        );
+      });
+
+      document.getElementById("btn-click-map").addEventListener("click", () => {
+        if (state.clickMapMode) exitClickMapMode();
+        else enterClickMapMode();
+      });
+    }
+
+    function initControls() {
+      const radiusSlider = document.getElementById("radius-slider");
+      const radiusValEl = document.getElementById("radius-val");
+      const priceSlider = document.getElementById("price-slider");
+      const priceValEl = document.getElementById("price-val");
+      const openNowToggle = document.getElementById("open-now-toggle");
+      const chipsWrap = document.getElementById("chips-wrap");
+
+      function updateRadius(persist = true) {
+        const idx = Number.parseInt(radiusSlider.value, 10);
+        state.radiusMeters = RADIUS_VALUES[idx];
+        radiusValEl.textContent = RADIUS_LABELS[idx];
+        const pct = (idx / (RADIUS_VALUES.length - 1)) * 100;
+        radiusSlider.style.background = `linear-gradient(to right, var(--purple) ${pct}%, var(--purple-border) ${pct}%)`;
+        updateSearchCircle();
+        updateBadge();
+        if (persist) savePrefs();
+      }
+
+      function updatePrice(persist = true) {
+        const raw = Number.parseInt(priceSlider.value, 10);
+        state.maxPriceLevel = raw === 0 ? null : raw;
+        priceValEl.textContent = raw === 0 ? "不限" : PRICE_LABELS[raw];
+        const pct = (raw / 4) * 100;
+        priceSlider.style.background = `linear-gradient(to right, var(--purple) ${pct}%, var(--purple-border) ${pct}%)`;
+        updateBadge();
+        if (persist) savePrefs();
+      }
+
+      radiusSlider.addEventListener("input", () => updateRadius(true));
+      priceSlider.addEventListener("input", () => updatePrice(true));
+      openNowToggle.addEventListener("change", () => {
+        state.openNow = openNowToggle.checked;
+        updateBadge();
+        savePrefs();
+      });
+
+      updateRadius(false);
+      updatePrice(false);
+
+      chipsWrap.addEventListener("click", (event) => {
+        const chip = event.target.closest(".chip");
+        if (!chip) return;
+
+        const allChip = chipsWrap.querySelector('.chip[data-value=""]');
+        const chips = [...chipsWrap.querySelectorAll(".chip")];
+
+        if (chip.dataset.value === "") {
+          chips.forEach((item) => item.classList.remove("active"));
+          chip.classList.add("active");
+        } else {
+          allChip.classList.remove("active");
+          chip.classList.toggle("active");
+          const hasAnySelected = chips.some((item) => item.dataset.value && item.classList.contains("active"));
+          if (!hasAnySelected) allChip.classList.add("active");
+        }
+
+        updateKeywords();
+        savePrefs();
+      });
+
+      document.getElementById("chip-custom").addEventListener("keydown", (event) => {
+        if (event.key !== "Enter") return;
+
+        const value = event.target.value.trim();
+        if (!value) return;
+
+        chipsWrap.querySelector('.chip[data-value=""]').classList.remove("active");
+
+        const newChip = document.createElement("button");
+        newChip.type = "button";
+        newChip.className = "chip active";
+        newChip.dataset.value = value;
+        newChip.dataset.custom = "1";
+        newChip.textContent = value;
+        chipsWrap.insertBefore(newChip, event.target);
+
+        event.target.value = "";
+        updateKeywords();
+        savePrefs();
+      });
+    }
+
+    function initSearch() {
+      document.getElementById("search-btn").addEventListener("click", searchNearby);
+    }
+
+    async function searchNearby() {
+      if (!state.center) {
+        showLocError("請先設定搜尋中心。");
+        return;
+      }
+
+      const thisSearchToken = ++searchToken;
+
+      const btn = document.getElementById("search-btn");
+      btn.disabled = true;
+      setSearchButtonLoading(true);
+      clearPlaceMarkers();
+      hideResult();
+      state.places = [];
+      setSearchProgress("");
+      document.getElementById("wheel-label").textContent = "搜尋中，找到的店家會逐步出現";
+
+      const service = new google.maps.places.PlacesService(map);
+      const request = {
+        location: state.center,
+        radius: state.radiusMeters,
+        type: "restaurant",
+      };
+
+      if (state.keywords.length) request.keyword = state.keywords.join(" ");
+      if (state.maxPriceLevel != null) request.maxPriceLevel = state.maxPriceLevel;
+      if (state.openNow) request.openNow = true;
+
+      let { results, status } = await collectNearbyResultsStream(service, request, ({ pageResults, hasNextPage }) => {
+        if (thisSearchToken !== searchToken) return;
+
+        const incoming = pageResults.filter((place) => {
+          const key = placeKey(place);
+          return !state.places.some((item) => placeKey(item) === key);
+        });
+
+        if (incoming.length) {
+          state.places.push(...incoming);
+          renderPlaceMarkers(incoming);
+          drawWheel(state.places);
+          updateBadge();
+          document.getElementById("wheel-label").textContent = `轉盤已載入 ${state.places.length} 間餐廳`;
+        }
+
+        activeSearchLoadedCount = state.places.length;
+        activeSearchSawNextPage = activeSearchSawNextPage || hasNextPage;
+
+        if (hasNextPage) {
+          document.getElementById("wheel-label").textContent = `轉盤已載入 ${state.places.length} 間餐廳（下一頁載入中...）`;
+        } else if (state.places.length >= 60) {
+          document.getElementById("wheel-label").textContent = `轉盤已載入 ${state.places.length} 間餐廳（Places API 最多只回傳 60 間，可能仍有未顯示結果）`;
+        } else {
+          document.getElementById("wheel-label").textContent = `轉盤已載入 ${state.places.length} 間餐廳`;
+        }
+      });
+      const hasKeyword = Boolean(request.keyword);
+
+      if (thisSearchToken !== searchToken) return;
+
+      if (hasKeyword && (!results || results.length === 0)) {
+        state.places = [];
+        clearPlaceMarkers();
+        document.getElementById("wheel-label").textContent = "關鍵字無結果，改用一般餐廳搜尋中";
+        const fallbackRequest = {
+          location: state.center,
+          radius: state.radiusMeters,
+          type: "restaurant",
+        };
+        if (state.maxPriceLevel != null) fallbackRequest.maxPriceLevel = state.maxPriceLevel;
+        if (state.openNow) fallbackRequest.openNow = true;
+        ({ results, status } = await collectNearbyResultsStream(service, fallbackRequest, ({ pageResults, hasNextPage }) => {
+          if (thisSearchToken !== searchToken) return;
+
+          const incoming = pageResults.filter((place) => {
+            const key = placeKey(place);
+            return !state.places.some((item) => placeKey(item) === key);
+          });
+
+          if (incoming.length) {
+            state.places.push(...incoming);
+            renderPlaceMarkers(incoming);
+            drawWheel(state.places);
+            updateBadge();
+            document.getElementById("wheel-label").textContent = `轉盤已載入 ${state.places.length} 間餐廳`;
+          }
+
+          activeSearchLoadedCount = state.places.length;
+          activeSearchSawNextPage = activeSearchSawNextPage || hasNextPage;
+
+          if (hasNextPage) {
+            document.getElementById("wheel-label").textContent = `轉盤已載入 ${state.places.length} 間餐廳（下一頁載入中...）`;
+          } else if (state.places.length >= 60) {
+            document.getElementById("wheel-label").textContent = `轉盤已載入 ${state.places.length} 間餐廳（Places API 最多只回傳 60 間，可能仍有未顯示結果）`;
+          } else {
+            document.getElementById("wheel-label").textContent = `轉盤已載入 ${state.places.length} 間餐廳`;
+          }
+        }));
+      }
+
+      if (thisSearchToken !== searchToken) return;
+
+      setSearchButtonLoading(false);
+      updateSearchAvailability();
+
+      if (!results || results.length === 0) {
+        state.places = [];
+        document.getElementById("spin-btn").disabled = true;
+        document.getElementById("wheel-label").textContent = "找不到餐廳，請調整條件";
+        drawWheel([]);
+        updateBadge();
+        showLocError(getPlacesErrorMessage(status, hasKeyword));
+        console.warn("Places nearbySearch returned no results", { status, request });
+        return;
+      }
+      document.getElementById("spin-btn").disabled = false;
+      const wheelLabel = document.getElementById("wheel-label");
+      wheelAngle = 0;
+      updateBadge();
+      drawWheel(state.places);
+
+      const morePossible = activeSearchSawNextPage || state.places.length >= 60;
+      if (morePossible) {
+        wheelLabel.textContent = `轉盤已載入 ${state.places.length} 間餐廳（Places API 最多只回傳 60 間，可能仍有未顯示結果）`;
+      } else {
+        wheelLabel.textContent = `轉盤已載入 ${state.places.length} 間餐廳`;
+      }
+      setSearchProgress("");
+
+      savePrefs();
+    }
+
+    function renderPlaceMarkers(places) {
+      if (!activeSearchBounds) {
+        activeSearchBounds = new google.maps.LatLngBounds();
+      }
+
+      places.forEach((place, index) => {
+        const marker = new google.maps.Marker({
+          position: place.geometry.location,
+          map,
+          title: place.name,
+          icon: createPlaceMarkerIcon(place),
+          zIndex: 5,
+        });
+
+        buildPlaceMarkerIcon(place).then((icon) => {
+          marker.setIcon(icon);
+        });
+
+        marker.addListener("click", () => showResult(place, -1, marker));
+        placeMarkers.push(marker);
+        activeSearchBounds.extend(place.geometry.location);
+      });
+
+      if (!activeSearchBounds.isEmpty()) {
+        activeSearchBounds.extend(state.center);
+        map.fitBounds(activeSearchBounds, 56);
+      }
+    }
+
+    function drawWheel(places) {
+      const canvas = document.getElementById("wheel-canvas");
+      const ctx = canvas.getContext("2d");
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      const radius = cx - 2;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (!places.length) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.fillStyle = "#e0d9f5";
+        ctx.fill();
+        ctx.fillStyle = "#7e69b6";
+        ctx.textAlign = "center";
+        ctx.font = "12px Segoe UI, sans-serif";
+        ctx.fillText("搜尋附近餐廳", cx, cy - 6);
+        ctx.fillText("再開始轉盤", cx, cy + 12);
+        return;
+      }
+
+      const sliceAngle = (Math.PI * 2) / places.length;
+
+      places.forEach((place, index) => {
+        const start = wheelAngle + index * sliceAngle - Math.PI / 2;
+        const end = start + sliceAngle;
+
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, radius, start, end);
+        ctx.closePath();
+        ctx.fillStyle = WHEEL_COLORS[index % WHEEL_COLORS.length];
+        ctx.fill();
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(start + sliceAngle / 2);
+        ctx.textAlign = "right";
+        ctx.fillStyle = "#ffffff";
+        ctx.font = `bold ${places.length > 16 ? 8 : 10}px Segoe UI, sans-serif`;
+        const label = place.name.length > 8 ? `${place.name.slice(0, 8)}…` : place.name;
+        ctx.fillText(label, radius - 10, 4);
+        ctx.restore();
+      });
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, 18, 0, Math.PI * 2);
+      ctx.fillStyle = "#ffffff";
+      ctx.fill();
+
+      ctx.strokeStyle = "#7e69b6";
+      ctx.lineWidth = 2;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(cx - 5, cy - 8);
+      ctx.lineTo(cx - 5, cy + 8);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx - 5, cy - 8);
+      ctx.lineTo(cx - 8, cy - 4);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx - 5, cy - 8);
+      ctx.lineTo(cx - 2, cy - 4);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx + 5, cy - 8);
+      ctx.lineTo(cx + 5, cy + 8);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx + 5, cy - 8);
+      ctx.bezierCurveTo(cx + 9, cy - 6, cx + 9, cy - 2, cx + 5, cy);
+      ctx.stroke();
+    }
+
+    function spinWheel() {
+      if (state.spinning || state.places.length === 0) return;
+
+      state.spinning = true;
+      hideResult();
+      document.getElementById("spin-btn").disabled = true;
+
+      const totalRotation = Math.PI * 2 * (5 + Math.random() * 5);
+      const duration = 4000 + Math.random() * 2000;
+      const startAngle = wheelAngle;
+      const sliceAngle = (Math.PI * 2) / state.places.length;
+      const finalAngle = (startAngle + totalRotation) % (Math.PI * 2);
+      const normalized = ((Math.PI * 2 - finalAngle) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+      const winnerIdx = Math.floor(normalized / sliceAngle) % state.places.length;
+      let startTime = null;
+
+      function easeOut(t) {
+        return 1 - Math.pow(1 - t, 4);
+      }
+
+      function frame(timestamp) {
+        if (!startTime) startTime = timestamp;
+
+        const progress = Math.min((timestamp - startTime) / duration, 1);
+        wheelAngle = startAngle + totalRotation * easeOut(progress);
+        drawWheel(state.places);
+
+        if (progress < 1) {
+          requestAnimationFrame(frame);
+          return;
+        }
+
+        state.spinning = false;
+        document.getElementById("spin-btn").disabled = false;
+        showResult(state.places[winnerIdx], winnerIdx);
+      }
+
+      requestAnimationFrame(frame);
+    }
+
+    function haversine(lat1, lng1, lat2, lng2) {
+      const r = 6371000;
+      const phi1 = lat1 * Math.PI / 180;
+      const phi2 = lat2 * Math.PI / 180;
+      const deltaPhi = (lat2 - lat1) * Math.PI / 180;
+      const deltaLambda = (lng2 - lng1) * Math.PI / 180;
+      const a = Math.sin(deltaPhi / 2) ** 2
+        + Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaLambda / 2) ** 2;
+      return r * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function getPlaceUrl(place) {
+      if (place.place_id) {
+        return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name || "")}&query_place_id=${place.place_id}`;
+      }
+
+      if (place.geometry && place.geometry.location) {
+        const lat = typeof place.geometry.location.lat === "function" ? place.geometry.location.lat() : place.geometry.location.lat;
+        const lng = typeof place.geometry.location.lng === "function" ? place.geometry.location.lng() : place.geometry.location.lng;
+        return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+      }
+
+      return "#";
+    }
+
+    function showResult(place, markerIndex = -1, markerOverride = null) {
+      state.selectedPlace = place;
+      document.getElementById("result-name").innerHTML = `
+        <a href="${getPlaceUrl(place)}" target="_blank" rel="noreferrer">${place.name}</a>
+      `;
+
+      const ratingEl = document.getElementById("result-rating");
+      ratingEl.innerHTML = typeof place.rating === "number"
+        ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg> ${place.rating}${place.user_ratings_total ? ` (${place.user_ratings_total})` : ""}`
+        : "暫無評分";
+
+      document.getElementById("result-addr").innerHTML = `
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
+          <circle cx="12" cy="10" r="3"></circle>
+        </svg>
+        ${place.vicinity || "地址未提供"}
+      `;
+
+      if (state.center && place.geometry && place.geometry.location) {
+        const lat = typeof place.geometry.location.lat === "function" ? place.geometry.location.lat() : place.geometry.location.lat;
+        const lng = typeof place.geometry.location.lng === "function" ? place.geometry.location.lng() : place.geometry.location.lng;
+        const dist = haversine(state.center.lat(), state.center.lng(), lat, lng);
+        document.getElementById("result-dist").innerHTML = `
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M12 8v4l3 3"></path>
+          </svg>
+          步行約 ${Math.ceil(dist / 80)} 分鐘
+        `;
+      } else {
+        document.getElementById("result-dist").textContent = "";
+      }
+
+      const navBtn = document.getElementById("btn-navigate");
+      navBtn.onclick = () => {
+        const url = getPlaceUrl(place);
+        if (url && url !== "#") window.open(url, "_blank", "noopener,noreferrer");
+      };
+
+      if (place.geometry && place.geometry.location) map.panTo(place.geometry.location);
+
+      const targetMarker = markerOverride || (markerIndex >= 0 ? placeMarkers[markerIndex] : null);
+
+      if (targetMarker) {
+        infoWindow.setContent(`
+          <div style="font-weight:700;font-size:13px;">${place.name}</div>
+          <div style="font-size:12px;color:#888;margin-top:2px;">${place.vicinity || ""}</div>
+        `);
+        infoWindow.open(map, targetMarker);
+      }
+
+      syncFavoriteButton();
+      document.getElementById("result-strip").classList.add("visible");
+      pushHistory(place);
+    }
+
+    function hideResult() {
+      document.getElementById("result-strip").classList.remove("visible");
+    }
+
+    function restorePreferences() {
+      state.favorites = loadFavorites();
+      state.history = loadHistory();
+      renderFavorites();
+      renderHistory();
+      updateSavedNote();
+
+      const prefs = loadPrefs();
+      if (!prefs) {
+        updateBadge();
+        return;
+      }
+
+      if (prefs.radiusMeters && RADIUS_VALUES.includes(prefs.radiusMeters)) {
+        const radiusSlider = document.getElementById("radius-slider");
+        radiusSlider.value = String(RADIUS_VALUES.indexOf(prefs.radiusMeters));
+        radiusSlider.dispatchEvent(new Event("input"));
+      }
+
+      const priceSlider = document.getElementById("price-slider");
+      priceSlider.value = String(
+        prefs.maxPriceLevel == null ? 0 : Math.max(0, Math.min(4, prefs.maxPriceLevel))
+      );
+      priceSlider.dispatchEvent(new Event("input"));
+
+      const openNowToggle = document.getElementById("open-now-toggle");
+      openNowToggle.checked = Boolean(prefs.openNow);
+      state.openNow = openNowToggle.checked;
+
+      applySavedKeywords(prefs.keywords);
+
+      if (prefs.center) {
+        const latLng = new google.maps.LatLng(prefs.center.lat, prefs.center.lng);
+        setCenter(latLng, {
+          updateAddress: false,
+          addressText: prefs.address || "",
+          pan: true,
+          zoom: true,
+          persist: false,
+        });
+      } else {
+        updateBadge();
+      }
+    }
+
+    function initResult() {
+      document.getElementById("spin-btn").addEventListener("click", spinWheel);
+      document.getElementById("btn-retry").addEventListener("click", spinWheel);
+      document.getElementById("favorite-toggle").addEventListener("click", () => toggleFavorite());
+      document.getElementById("clear-favorites-btn").addEventListener("click", () => {
+        state.favorites = [];
+        saveFavorites();
+        renderFavorites();
+        syncFavoriteButton();
+      });
+      document.getElementById("clear-history-btn").addEventListener("click", () => {
+        state.history = [];
+        saveHistory();
+        renderHistory();
+      });
+    }
+
+    function initMap() {
+      mapsScriptLoading = false;
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: 25.0338, lng: 121.5654 },
+        zoom: 14,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+        styles: [
+          { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] },
+        ],
+      });
+
+      infoWindow = new google.maps.InfoWindow();
+      geocoder = new google.maps.Geocoder();
+
+      map.addListener("click", (event) => {
+        if (!state.clickMapMode) return;
+        setCenter(event.latLng, { updateAddress: true, persist: true });
+        exitClickMapMode();
+      });
+
+      renderIcons();
+      initLocationControls();
+      initControls();
+      initSearch();
+      initResult();
+      setSearchButtonLoading(false);
+      drawWheel([]);
+      restorePreferences();
+      syncFavoriteButton();
+      renderIcons();
+    }
+
+    initApiSettings();
+    const initialApiKey = loadStoredMapsApiKey();
+    if (initialApiKey) {
+      loadGoogleMapsApi(initialApiKey);
     } else {
-      chipsWrap.querySelector('button.chip[data-value=""]').classList.remove('active');
-      chip.classList.toggle('active');
-      if (![...allChips].some(c => c.classList.contains('active')))
-        chipsWrap.querySelector('button.chip[data-value=""]').classList.add('active');
+      openApiModal();
+      document.getElementById("wheel-label").textContent = "請先設定 Google API Key";
+      setSearchProgress("設定完成後才會載入地圖與餐廳搜尋。");
     }
-    updateKeywords();
-  });
-
-  document.getElementById('chip-custom').addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter') return;
-    const val = e.target.value.trim();
-    if (!val) return;
-    chipsWrap.querySelector('button.chip[data-value=""]').classList.remove('active');
-    const btn = document.createElement('button');
-    btn.type = 'button'; btn.className = 'chip active';
-    btn.dataset.value = val; btn.textContent = val;
-    chipsWrap.insertBefore(btn, e.target);
-    e.target.value = '';
-    updateKeywords();
-  });
-}
-
-function updateKeywords() {
-  state.keywords = [...document.querySelectorAll('#chips-wrap button.chip.active')]
-    .map(c => c.dataset.value).filter(v => v !== '');
-}
-
-// ── Search module ──
-function initSearch() {
-  document.getElementById('search-btn').addEventListener('click', searchNearby);
-}
-
-function searchNearby() {
-  if (!state.center) return;
-  const btn = document.getElementById('search-btn');
-  btn.disabled = true;
-  btn.innerHTML = '<svg class="icon-spin" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg> 搜尋中…';
-
-  clearPlaceMarkers();
-  hideResult();
-
-  const service = new google.maps.places.PlacesService(map);
-  const req = {
-    location: state.center,
-    radius: state.radiusMeters,
-    type: 'restaurant',
-  };
-  if (state.keywords.length) req.keyword = state.keywords.join(' ');
-
-  service.nearbySearch(req, (results, status) => {
-    btn.disabled = false;
-    btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> 搜尋附近餐廳';
-
-    if (status !== google.maps.places.PlacesServiceStatus.OK || !results.length) {
-      document.getElementById('wheel-label').textContent = '找不到餐廳，請調整條件';
-      return;
-    }
-
-    state.places = results.slice(0, 20);
-    document.getElementById('spin-btn').disabled = false;
-    document.getElementById('wheel-label').textContent = `轉盤（${state.places.length} 家）`;
-    updateBadge();
-    renderPlaceMarkers();
-    wheelAngle = 0;
-    drawWheel(state.places);
-  });
-}
-
-function renderPlaceMarkers() {
-  state.places.forEach((place) => {
-    const marker = new google.maps.Marker({
-      position: place.geometry.location,
-      map,
-      title: place.name,
-      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 7, fillColor: '#9b87cc', fillOpacity: 0.9, strokeColor: '#fff', strokeWeight: 1.5 },
-      zIndex: 5,
-    });
-    marker.addListener('click', () => {
-      infoWindow.setContent(`<div style="font-weight:700;font-size:13px;">${place.name}</div><div style="font-size:12px;color:#888;margin-top:2px;">${place.vicinity || ''}</div>`);
-      infoWindow.open(map, marker);
-    });
-    placeMarkers.push(marker);
-  });
-}
-
-// ── Wheel module ──
-function drawWheel(places) {
-  const canvas = document.getElementById('wheel-canvas');
-  const ctx = canvas.getContext('2d');
-  const cx = canvas.width / 2, cy = canvas.height / 2, R = cx - 2;
-
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  if (!places.length) {
-    ctx.beginPath();
-    ctx.arc(cx, cy, R, 0, Math.PI * 2);
-    ctx.fillStyle = 'var(--purple-border)';
-    ctx.fill();
-    ctx.fillStyle = '#9b87cc';
-    ctx.font = '12px Segoe UI, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('搜尋後開始', cx, cy - 6);
-    ctx.fillText('抽籤', cx, cy + 10);
-    return;
-  }
-
-  const n = places.length;
-  const slice = (Math.PI * 2) / n;
-
-  places.forEach((place, i) => {
-    const start = wheelAngle + i * slice - Math.PI / 2;
-    const end = start + slice;
-
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.arc(cx, cy, R, start, end);
-    ctx.closePath();
-    ctx.fillStyle = WHEEL_COLORS[i % WHEEL_COLORS.length];
-    ctx.fill();
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(start + slice / 2);
-    ctx.textAlign = 'right';
-    ctx.fillStyle = '#fff';
-    ctx.font = `bold ${n > 12 ? 9 : 10}px Segoe UI, sans-serif`;
-    const label = place.name.length > 8 ? place.name.slice(0, 8) + '…' : place.name;
-    ctx.fillText(label, R - 8, 4);
-    ctx.restore();
-  });
-
-  // Center circle
-  ctx.beginPath();
-  ctx.arc(cx, cy, 16, 0, Math.PI * 2);
-  ctx.fillStyle = '#fff';
-  ctx.fill();
-  // Fork icon
-  ctx.strokeStyle = '#7e69b6';
-  ctx.lineWidth = 2;
-  ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(cx - 5, cy - 8); ctx.lineTo(cx - 5, cy + 8); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx - 5, cy - 8); ctx.lineTo(cx - 8, cy - 4); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx - 5, cy - 8); ctx.lineTo(cx - 2, cy - 4); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx + 5, cy - 8); ctx.lineTo(cx + 5, cy + 8); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx + 5, cy - 8); ctx.bezierCurveTo(cx + 9, cy - 6, cx + 9, cy - 2, cx + 5, cy); ctx.stroke();
-}
-
-function spinWheel() {
-  if (state.spinning || !state.places.length) return;
-  state.spinning = true;
-  hideResult();
-  document.getElementById('spin-btn').disabled = true;
-
-  const totalRotation = Math.PI * 2 * (5 + Math.random() * 5);
-  const duration = 4000 + Math.random() * 2000;
-  const startAngle = wheelAngle;
-  let startTime = null;
-
-  const n = state.places.length;
-  const finalAngle = (startAngle + totalRotation) % (Math.PI * 2);
-  const normalised = ((Math.PI * 2 - finalAngle) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
-  const winnerIdx = Math.floor(normalised / ((Math.PI * 2) / n)) % n;
-
-  function easeOut(t) { return 1 - Math.pow(1 - t, 4); }
-
-  function frame(ts) {
-    if (!startTime) startTime = ts;
-    const progress = Math.min((ts - startTime) / duration, 1);
-    wheelAngle = startAngle + totalRotation * easeOut(progress);
-    drawWheel(state.places);
-    if (progress < 1) { requestAnimationFrame(frame); return; }
-    state.spinning = false;
-    document.getElementById('spin-btn').disabled = false;
-    showResult(state.places[winnerIdx], winnerIdx);
-  }
-
-  requestAnimationFrame(frame);
-}
-
-// ── Result module ──
-function initResult() {
-  document.getElementById('spin-btn').addEventListener('click', spinWheel);
-  document.getElementById('btn-retry').addEventListener('click', spinWheel);
-}
-
-function haversine(lat1, lng1, lat2, lng2) {
-  const R = 6371000, phi1 = lat1 * Math.PI / 180, phi2 = lat2 * Math.PI / 180;
-  const dp = (lat2 - lat1) * Math.PI / 180, dl = (lng2 - lng1) * Math.PI / 180;
-  return R * 2 * Math.atan2(Math.sqrt(Math.sin(dp/2)**2 + Math.cos(phi1)*Math.cos(phi2)*Math.sin(dl/2)**2),
-    Math.sqrt(1 - (Math.sin(dp/2)**2 + Math.cos(phi1)*Math.cos(phi2)*Math.sin(dl/2)**2)));
-}
-
-function showResult(place, idx) {
-  document.getElementById('result-name').textContent = place.name;
-
-  document.getElementById('result-rating').innerHTML = place.rating
-    ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> ${place.rating}${place.user_ratings_total ? ` (${place.user_ratings_total})` : ''}`
-    : '無評分';
-
-  document.getElementById('result-addr').innerHTML =
-    `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg> ${place.vicinity || '—'}`;
-
-  if (state.center) {
-    const dist = haversine(state.center.lat(), state.center.lng(),
-      place.geometry.location.lat(), place.geometry.location.lng());
-    document.getElementById('result-dist').innerHTML =
-      `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg> 步行約 ${Math.ceil(dist / 80)} 分鐘`;
-  }
-
-  document.getElementById('btn-navigate').onclick = () => {
-    window.open(`https://www.google.com/maps/dir/?api=1&destination_place_id=${place.place_id}&travelmode=walking`, '_blank');
-  };
-
-  map.panTo(place.geometry.location);
-  if (placeMarkers[idx]) {
-    infoWindow.setContent(`<div style="font-weight:700;font-size:13px;">${place.name}</div><div style="font-size:12px;color:#888;margin-top:2px;">${place.vicinity || ''}</div>`);
-    infoWindow.open(map, placeMarkers[idx]);
-  }
-
-  document.getElementById('result-strip').classList.add('visible');
-}
-
-function hideResult() {
-  document.getElementById('result-strip').classList.remove('visible');
-}
-</script>
-
-<script async
-  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD_zNYGHtJpRMFpwnSjBFZLf3-kBnRhLvs&libraries=places&callback=initMap">
-</script>
+  </script>
 </body>
 </html>
