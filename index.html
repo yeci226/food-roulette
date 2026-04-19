@@ -368,8 +368,8 @@
       <div id="map-container">
         <div id="map"></div>
         <div id="map-overlay">
-          <div id="map-badge">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7e69b6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+          <div id="map-badge" style="color:#7e69b6">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
             <span id="badge-text">尚未設定位置</span>
           </div>
           <div id="map-hint">
@@ -393,7 +393,7 @@ const state = {
 };
 
 // ── Map module ──
-let map, centerMarker, searchCircle, placeMarkers = [], infoWindow;
+let map, centerMarker, searchCircle, placeMarkers = [], infoWindow, geocoder;
 
 function initMap() {
   const taipei = { lat: 25.0338, lng: 121.5654 };
@@ -409,6 +409,7 @@ function initMap() {
   });
 
   infoWindow = new google.maps.InfoWindow();
+  geocoder = new google.maps.Geocoder();
 
   map.addListener('click', (e) => {
     if (!state.clickMapMode) return;
@@ -422,23 +423,30 @@ function initMap() {
 
 function setCenter(latLng) {
   state.center = latLng;
-  if (centerMarker) centerMarker.setMap(null);
-  centerMarker = new google.maps.Marker({
-    position: latLng,
-    map,
-    draggable: true,
-    icon: {
-      path: google.maps.SymbolPath.CIRCLE,
-      scale: 10,
-      fillColor: '#7e69b6',
-      fillOpacity: 1,
-      strokeColor: '#fff',
-      strokeWeight: 2,
-    },
-    title: '搜尋中心',
-    zIndex: 10,
-  });
-  centerMarker.addListener('dragend', (e) => setCenter(e.latLng));
+  if (centerMarker) {
+    centerMarker.setPosition(latLng);
+  } else {
+    centerMarker = new google.maps.Marker({
+      position: latLng,
+      map,
+      draggable: true,
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 10,
+        fillColor: '#7e69b6',
+        fillOpacity: 1,
+        strokeColor: '#fff',
+        strokeWeight: 2,
+      },
+      title: '搜尋中心',
+      zIndex: 10,
+    });
+    centerMarker.addListener('dragend', (e) => {
+      state.center = e.latLng;
+      updateSearchCircle();
+      reverseGeocode(e.latLng);
+    });
+  }
   updateSearchCircle();
   reverseGeocode(latLng);
 }
@@ -459,12 +467,14 @@ function updateSearchCircle() {
 }
 
 function reverseGeocode(latLng) {
-  const geocoder = new google.maps.Geocoder();
   geocoder.geocode({ location: latLng }, (results, status) => {
     if (status === 'OK' && results[0]) {
       document.getElementById('loc-input').value = results[0].formatted_address;
-      updateBadge();
+    } else {
+      const ll = latLng.lat().toFixed(4) + ', ' + latLng.lng().toFixed(4);
+      document.getElementById('loc-input').value = ll;
     }
+    updateBadge();
   });
 }
 
@@ -480,12 +490,14 @@ function updateBadge() {
 }
 
 function enterClickMapMode() {
+  if (!map) return;
   state.clickMapMode = true;
   document.getElementById('map-hint').classList.add('visible');
   map.setOptions({ draggableCursor: 'crosshair' });
 }
 
 function exitClickMapMode() {
+  if (!map) return;
   state.clickMapMode = false;
   document.getElementById('map-hint').classList.remove('visible');
   map.setOptions({ draggableCursor: null });
