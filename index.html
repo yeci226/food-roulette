@@ -1187,6 +1187,7 @@
     let activeSearchLoadedCount = 0;
     let activeSearchSawNextPage = false;
     let restoringPrefs = false;
+    let shouldAutoSearchFromUrl = false;
     const placeIconCache = new Map();
 
     const SEARCH_BTN_DEFAULT = `
@@ -1946,6 +1947,79 @@
       });
     }
 
+    function normalizePlaceName(value) {
+      return (value || "")
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "");
+    }
+
+    function lookupSharedPlaceByName(service, sharedPlaceName) {
+      return new Promise((resolve) => {
+        if (!service || !sharedPlaceName || !state.center) {
+          resolve(null);
+          return;
+        }
+
+        service.textSearch({
+          query: sharedPlaceName,
+          location: state.center,
+          radius: Math.max(state.radiusMeters, 1500),
+          type: "restaurant",
+        }, (results, status) => {
+          if (status !== google.maps.places.PlacesServiceStatus.OK || !results || !results.length) {
+            resolve(null);
+            return;
+          }
+
+          const targetName = normalizePlaceName(sharedPlaceName);
+          const exact = results.find((place) => normalizePlaceName(place && place.name) === targetName);
+          if (exact) {
+            resolve(exact);
+            return;
+          }
+
+          const partial = results.find((place) => {
+            const candidate = normalizePlaceName(place && place.name);
+            return candidate.includes(targetName) || targetName.includes(candidate);
+          });
+          if (partial) {
+            resolve(partial);
+            return;
+          }
+
+          resolve(results[0]);
+        });
+      });
+    }
+
+    function pinAndShowSharedPlace(sharedPlace, options = {}) {
+      const { drawCurrentWheel = false } = options;
+      if (!sharedPlace || !sharedPlace.geometry || !sharedPlace.geometry.location) return false;
+
+      if (focusedPlaceMarker) {
+        focusedPlaceMarker.setMap(null);
+      }
+
+      focusedPlaceMarker = createAppMarker({
+        map,
+        position: sharedPlace.geometry.location,
+        title: sharedPlace.name || "分享店家",
+        icon: createPlaceMarkerIcon(sharedPlace),
+        zIndex: 20,
+      });
+
+      buildPlaceMarkerIcon(sharedPlace).then((icon) => {
+        if (focusedPlaceMarker) focusedPlaceMarker.setIcon(icon);
+      });
+
+      if (drawCurrentWheel) drawWheel(state.places);
+      document.getElementById("wheel-center-btn").disabled = false;
+      showResult(sharedPlace, -1, focusedPlaceMarker);
+      return true;
+    }
+
     function placeKey(place) {
       if (place && place.place_id) return place.place_id;
 
@@ -2277,7 +2351,9 @@
       document.getElementById("search-btn").addEventListener("click", searchNearby);
     }
 
-    async function searchNearby() {
+    async function searchNearby(options = {}) {
+      const { preserveSelectedPlaceName = false } = options;
+
       if (!state.center) {
         showLocError("請先設定搜尋中心。");
         return;
@@ -2292,12 +2368,26 @@
       hideResult();
       state.places = [];
       state.selectedPlace = null;
-      state.selectedPlaceName = "";
-      syncUrlWithCurrentFilters();
+      if (!preserveSelectedPlaceName) {
+        state.selectedPlaceName = "";
+        syncUrlWithCurrentFilters();
+      }
       setSearchProgress("");
       document.getElementById("wheel-label").textContent = "搜尋中，找到的店家會逐步出現";
 
       const service = new google.maps.places.PlacesService(map);
+      const sharedPlaceName = (state.selectedPlaceName || "").trim();
+      let sharedPlaceOpened = false;
+      let sharedPlaceLookupPromise = null;
+
+      if (sharedPlaceName) {
+        sharedPlaceLookupPromise = lookupSharedPlaceByName(service, sharedPlaceName);
+        sharedPlaceLookupPromise.then((sharedPlace) => {
+          if (!sharedPlace || thisSearchToken !== searchToken || sharedPlaceOpened) return;
+          sharedPlaceOpened = pinAndShowSharedPlace(sharedPlace, { drawCurrentWheel: false }) || sharedPlaceOpened;
+        });
+      }
+
       const passPriceFilter = (place) => {
         if (state.maxPriceLevel == null) return true;
         const level = place && typeof place.price_level === "number" ? place.price_level : null;
@@ -2395,6 +2485,18 @@
       updateSearchAvailability();
 
       if (!results || results.length === 0 || state.places.length === 0) {
+        if (sharedPlaceName && !sharedPlaceOpened) {
+          const sharedPlace = sharedPlaceLookupPromise
+            ? await sharedPlaceLookupPromise
+            : await lookupSharedPlaceByName(service, sharedPlaceName);
+          if (sharedPlace && thisSearchToken === searchToken && !sharedPlaceOpened) {
+            sharedPlaceOpened = pinAndShowSharedPlace(sharedPlace, { drawCurrentWheel: true }) || sharedPlaceOpened;
+            setSearchProgress("");
+            savePrefs();
+            return;
+          }
+        }
+
         state.places = [];
         document.getElementById("wheel-center-btn").disabled = true;
         document.getElementById("wheel-label").textContent = "找不到餐廳，請調整條件";
@@ -2417,6 +2519,26 @@
       wheelAngle = 0;
       updateBadge();
       drawWheel(state.places);
+
+      if (sharedPlaceName && !sharedPlaceOpened) {
+        const targetName = normalizePlaceName(sharedPlaceName);
+        const sharedIndex = state.places.findIndex((place) => {
+          const name = normalizePlaceName(place && place.name ? place.name : "");
+          return name === targetName || name.includes(targetName) || targetName.includes(name);
+        });
+        if (sharedIndex >= 0) {
+          const sharedMarker = placeMarkers[sharedIndex] || null;
+          showResult(state.places[sharedIndex], sharedIndex, sharedMarker);
+          sharedPlaceOpened = true;
+        } else {
+          const sharedPlace = sharedPlaceLookupPromise
+            ? await sharedPlaceLookupPromise
+            : await lookupSharedPlaceByName(service, sharedPlaceName);
+          if (sharedPlace && thisSearchToken === searchToken && !sharedPlaceOpened) {
+            sharedPlaceOpened = pinAndShowSharedPlace(sharedPlace, { drawCurrentWheel: false }) || sharedPlaceOpened;
+          }
+        }
+      }
 
       const morePossible = activeSearchSawNextPage || state.places.length >= 60;
       if (morePossible) {
@@ -2673,7 +2795,8 @@
       renderHistory();
       updateSavedNote();
 
-      const prefs = getPrefsFromUrl() || loadPrefs();
+      const urlPrefs = getPrefsFromUrl();
+      const prefs = urlPrefs || loadPrefs();
       if (!prefs) {
         updateBadge();
         syncUrlWithCurrentFilters();
@@ -2717,6 +2840,12 @@
       restoringPrefs = false;
       updateSavedNote(prefs);
       syncUrlWithCurrentFilters();
+
+      shouldAutoSearchFromUrl = Boolean(urlPrefs && urlPrefs.center);
+      if (shouldAutoSearchFromUrl) {
+        shouldAutoSearchFromUrl = false;
+        searchNearby({ preserveSelectedPlaceName: true });
+      }
     }
 
     function initResult() {
