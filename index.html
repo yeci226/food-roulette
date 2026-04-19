@@ -156,7 +156,7 @@
 
     .loc-btn,
     #search-btn,
-    #spin-btn,
+    #wheel-center-btn,
     .action-btn,
     .mini-btn,
     .memory-item,
@@ -428,6 +428,11 @@
       gap: 8px;
     }
 
+    .memory-list.is-scrollable {
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
     .memory-empty {
       padding: 10px 12px;
       border-radius: 10px;
@@ -526,21 +531,26 @@
       color: var(--purple);
     }
 
-    #spin-btn {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      padding: 11px 32px;
-      border-radius: 999px;
-      background: var(--purple);
-      color: var(--white);
-      font-size: 14px;
-      font-weight: 700;
-      box-shadow: 0 5px 16px rgba(126, 105, 182, 0.38);
+    #wheel-center-btn {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      border: 2px solid var(--purple);
+      background: var(--white);
+      color: var(--purple);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      z-index: 3;
+      box-shadow: 0 6px 14px rgba(126, 105, 182, 0.22);
     }
 
     #search-btn:disabled,
-    #spin-btn:disabled {
+    #wheel-center-btn:disabled {
       opacity: 0.5;
       cursor: not-allowed;
     }
@@ -985,11 +995,8 @@
               <polygon points="12,22 21,4 3,4" fill="currentColor"></polygon>
             </svg>
             <canvas id="wheel-canvas" width="240" height="240"></canvas>
+            <button id="wheel-center-btn" type="button" aria-label="開始轉盤" disabled>GO</button>
           </div>
-          <button id="spin-btn" type="button" disabled>
-            <i data-lucide="sparkles" aria-hidden="true"></i>
-            開始轉盤
-          </button>
         </div>
 
         <div class="sb-section">
@@ -1178,20 +1185,27 @@
       return canUseStorage ? safeJsonParse(localStorage.getItem(STORAGE_KEYS.prefs), null) : null;
     }
 
-    function savePrefs() {
-      if (!canUseStorage || restoringPrefs) return;
+    function savePrefs(options = {}) {
+      if (restoringPrefs) return;
+      const { allowEmptyCenter = false } = options;
+      const previous = loadPrefs() || {};
       const address = document.getElementById("loc-input").value.trim();
+      const centerPayload = state.center
+        ? { lat: state.center.lat(), lng: state.center.lng() }
+        : (allowEmptyCenter ? null : (previous.center || null));
+      const addressPayload = address || (allowEmptyCenter ? "" : (previous.address || ""));
       const payload = {
         radiusMeters: state.radiusMeters,
         maxPriceLevel: state.maxPriceLevel,
         openNow: state.openNow,
         keywords: [...state.keywords],
-        address,
-        center: state.center ? { lat: state.center.lat(), lng: state.center.lng() } : null,
+        address: addressPayload,
+        center: centerPayload,
         updatedAt: Date.now(),
       };
-      localStorage.setItem(STORAGE_KEYS.prefs, JSON.stringify(payload));
+      if (canUseStorage) localStorage.setItem(STORAGE_KEYS.prefs, JSON.stringify(payload));
       updateSavedNote(payload);
+      syncUrlWithCurrentFilters(payload);
     }
 
     function loadFavorites() {
@@ -1223,6 +1237,78 @@
       const idx = RADIUS_VALUES.indexOf(prefs.radiusMeters);
       const radiusLabel = RADIUS_LABELS[idx === -1 ? 3 : idx];
       note.textContent = `已記住上次位置：${address} · ${radiusLabel}`;
+    }
+
+    function getPrefsFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const hasKnownParams = ["lat", "lng", "r", "p", "o", "k", "a"].some((key) => params.has(key));
+      if (!hasKnownParams) return null;
+
+      const lat = Number.parseFloat(params.get("lat"));
+      const lng = Number.parseFloat(params.get("lng"));
+      const radius = Number.parseInt(params.get("r"), 10);
+      const rawPrice = params.get("p");
+
+      const center = Number.isFinite(lat) && Number.isFinite(lng)
+        ? { lat, lng }
+        : null;
+
+      const radiusMeters = Number.isFinite(radius) && RADIUS_VALUES.includes(radius)
+        ? radius
+        : state.radiusMeters;
+
+      const maxPriceLevel = rawPrice == null
+        ? state.maxPriceLevel
+        : (() => {
+            const parsed = Number.parseInt(rawPrice, 10);
+            if (!Number.isFinite(parsed) || parsed <= 0) return null;
+            return Math.max(1, Math.min(4, parsed));
+          })();
+
+      const openNow = params.get("o") === "1";
+      const keywords = params.getAll("k").map((item) => item.trim()).filter(Boolean);
+      const address = (params.get("a") || "").trim();
+
+      return {
+        radiusMeters,
+        maxPriceLevel,
+        openNow,
+        keywords,
+        address,
+        center,
+      };
+    }
+
+    function syncUrlWithCurrentFilters(prefsOverride = null) {
+      const source = prefsOverride || {
+        radiusMeters: state.radiusMeters,
+        maxPriceLevel: state.maxPriceLevel,
+        openNow: state.openNow,
+        keywords: [...state.keywords],
+        address: document.getElementById("loc-input").value.trim(),
+        center: state.center
+          ? { lat: state.center.lat(), lng: state.center.lng() }
+          : null,
+      };
+
+      const params = new URLSearchParams();
+      params.set("r", String(source.radiusMeters));
+
+      if (source.maxPriceLevel != null) params.set("p", String(source.maxPriceLevel));
+      if (source.openNow) params.set("o", "1");
+      if (Array.isArray(source.keywords)) {
+        source.keywords.filter(Boolean).forEach((keyword) => params.append("k", keyword));
+      }
+
+      if (source.center && Number.isFinite(source.center.lat) && Number.isFinite(source.center.lng)) {
+        params.set("lat", String(source.center.lat));
+        params.set("lng", String(source.center.lng));
+        if (source.address) params.set("a", source.address);
+      }
+
+      const queryString = params.toString();
+      const nextUrl = `${window.location.pathname}${queryString ? `?${queryString}` : ""}${window.location.hash || ""}`;
+      window.history.replaceState(null, "", nextUrl);
     }
 
     function updateSearchAvailability() {
@@ -1284,7 +1370,7 @@
       const script = document.createElement("script");
       script.id = GOOGLE_MAPS_SCRIPT_ID;
       script.async = true;
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=places&callback=initMap`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=places,marker&loading=async&callback=initMap`;
       script.onerror = () => {
         mapsScriptLoading = false;
         document.getElementById("api-key-error").textContent = "API Key 載入失敗，請確認 key、API 啟用狀態與網域限制。";
@@ -1346,9 +1432,12 @@
       state.center = latLng;
 
       if (!centerMarker) {
-        centerMarker = new google.maps.Marker({
+        centerMarker = createAppMarker({
           map,
+          position: latLng,
           draggable: true,
+          title: "搜尋中心",
+          zIndex: 10,
           icon: {
             path: google.maps.SymbolPath.CIRCLE,
             scale: 10,
@@ -1357,12 +1446,13 @@
             strokeColor: "#ffffff",
             strokeWeight: 2,
           },
-          title: "搜尋中心",
-          zIndex: 10,
         });
 
         centerMarker.addListener("dragend", (event) => {
-          setCenter(event.latLng, { updateAddress: true, persist: true });
+          const nextPosition = event && event.latLng
+            ? event.latLng
+            : (centerMarker.getAnchor() && centerMarker.getAnchor().position);
+          if (nextPosition) setCenter(nextPosition, { updateAddress: true, persist: true });
         });
       }
 
@@ -1596,6 +1686,33 @@
       return button;
     }
 
+    function updateMemoryListScrollState(list, count) {
+      if (!list) return;
+
+      if (count <= 10) {
+        list.classList.remove("is-scrollable");
+        list.style.maxHeight = "";
+        return;
+      }
+
+      const items = [...list.querySelectorAll(".memory-item")];
+      if (!items.length) {
+        list.classList.remove("is-scrollable");
+        list.style.maxHeight = "";
+        return;
+      }
+
+      const style = getComputedStyle(list);
+      const gap = Number.parseFloat(style.rowGap || style.gap || "0") || 0;
+      const visibleItems = items.slice(0, 10);
+      const height = visibleItems.reduce((sum, item) => sum + item.getBoundingClientRect().height, 0)
+        + gap * Math.max(visibleItems.length - 1, 0)
+        + 2;
+
+      list.classList.add("is-scrollable");
+      list.style.maxHeight = `${Math.ceil(height)}px`;
+    }
+
     function renderFavorites() {
       const list = document.getElementById("favorites-list");
       list.innerHTML = "";
@@ -1605,6 +1722,8 @@
       } else {
         state.favorites.forEach((item) => list.appendChild(createMemoryItem(item, "favorite")));
       }
+
+      updateMemoryListScrollState(list, state.favorites.length);
 
       document.getElementById("clear-favorites-btn").disabled = state.favorites.length === 0;
       renderIcons();
@@ -1619,6 +1738,8 @@
       } else {
         state.history.forEach((item) => list.appendChild(createMemoryItem(item, "history")));
       }
+
+      updateMemoryListScrollState(list, state.history.length);
 
       document.getElementById("clear-history-btn").disabled = state.history.length === 0;
       renderIcons();
@@ -1640,7 +1761,7 @@
         focusedPlaceMarker.setMap(null);
       }
 
-      focusedPlaceMarker = new google.maps.Marker({
+      focusedPlaceMarker = createAppMarker({
         map,
         position: latLng,
         title: item.name || "已儲存餐廳",
@@ -1742,6 +1863,104 @@
       return `${place.name || "unknown"}|${lat.toFixed(6)},${lng.toFixed(6)}`;
     }
 
+    function supportsAdvancedMarkers(mapInstance) {
+      const hasAdvancedApi = Boolean(google.maps.marker && google.maps.marker.AdvancedMarkerElement);
+      const hasMapId = Boolean(
+        mapInstance
+        && typeof mapInstance.get === "function"
+        && mapInstance.get("mapId")
+      );
+      return hasAdvancedApi && hasMapId;
+    }
+
+    function buildMarkerContent(icon) {
+      const wrap = document.createElement("div");
+      wrap.style.width = "34px";
+      wrap.style.height = "34px";
+      wrap.style.display = "flex";
+      wrap.style.alignItems = "center";
+      wrap.style.justifyContent = "center";
+
+      if (icon && icon.url) {
+        const img = document.createElement("img");
+        img.src = icon.url;
+        img.alt = "";
+        img.width = 34;
+        img.height = 34;
+        img.style.width = "34px";
+        img.style.height = "34px";
+        wrap.appendChild(img);
+        return wrap;
+      }
+
+      const dot = document.createElement("div");
+      dot.style.width = "14px";
+      dot.style.height = "14px";
+      dot.style.borderRadius = "50%";
+      dot.style.background = "#9b87cc";
+      dot.style.border = "2px solid #ffffff";
+      wrap.appendChild(dot);
+      return wrap;
+    }
+
+    function createAppMarker({ map, position, title, icon, zIndex = 1, draggable = false }) {
+      if (supportsAdvancedMarkers(map)) {
+        const raw = new google.maps.marker.AdvancedMarkerElement({
+          map,
+          position,
+          title,
+          zIndex,
+          content: buildMarkerContent(icon),
+          gmpDraggable: draggable,
+        });
+
+        return {
+          setMap(nextMap) {
+            raw.map = nextMap;
+          },
+          setPosition(nextPosition) {
+            raw.position = nextPosition;
+          },
+          setIcon(nextIcon) {
+            raw.content = buildMarkerContent(nextIcon);
+          },
+          addListener(eventName, handler) {
+            return raw.addListener(eventName, handler);
+          },
+          getAnchor() {
+            return raw;
+          },
+        };
+      }
+
+      const raw = new google.maps.Marker({
+        map,
+        position,
+        title,
+        icon,
+        zIndex,
+        draggable,
+      });
+
+      return {
+        setMap(nextMap) {
+          raw.setMap(nextMap);
+        },
+        setPosition(nextPosition) {
+          raw.setPosition(nextPosition);
+        },
+        setIcon(nextIcon) {
+          raw.setIcon(nextIcon);
+        },
+        addListener(eventName, handler) {
+          return raw.addListener(eventName, handler);
+        },
+        getAnchor() {
+          return raw;
+        },
+      };
+    }
+
     function createPlaceMarkerIcon(place) {
       const iconUrl = place && place.icon ? place.icon : null;
       if (!iconUrl) {
@@ -1838,12 +2057,12 @@
           state.selectedPlace = null;
           clearPlaceMarkers();
           hideResult();
-          document.getElementById("spin-btn").disabled = true;
+          document.getElementById("wheel-center-btn").disabled = true;
           document.getElementById("wheel-label").textContent = "先搜尋餐廳再開始轉盤";
           drawWheel([]);
           updateSearchAvailability();
           updateBadge();
-          savePrefs();
+          syncUrlWithCurrentFilters();
         }
       });
 
@@ -1935,15 +2154,23 @@
         const value = event.target.value.trim();
         if (!value) return;
 
-        chipsWrap.querySelector('.chip[data-value=""]').classList.remove("active");
+        const allChip = chipsWrap.querySelector('.chip[data-value=""]');
+        allChip.classList.remove("active");
 
-        const newChip = document.createElement("button");
-        newChip.type = "button";
-        newChip.className = "chip active";
-        newChip.dataset.value = value;
-        newChip.dataset.custom = "1";
-        newChip.textContent = value;
-        chipsWrap.insertBefore(newChip, event.target);
+        const chips = [...chipsWrap.querySelectorAll(".chip")];
+        const existingChip = chips.find((chip) => chip.dataset.value === value);
+
+        if (existingChip) {
+          existingChip.classList.add("active");
+        } else {
+          const newChip = document.createElement("button");
+          newChip.type = "button";
+          newChip.className = "chip active";
+          newChip.dataset.value = value;
+          newChip.dataset.custom = "1";
+          newChip.textContent = value;
+          chipsWrap.insertBefore(newChip, event.target);
+        }
 
         event.target.value = "";
         updateKeywords();
@@ -1973,6 +2200,16 @@
       document.getElementById("wheel-label").textContent = "搜尋中，找到的店家會逐步出現";
 
       const service = new google.maps.places.PlacesService(map);
+      const passPriceFilter = (place) => {
+        if (state.maxPriceLevel == null) return true;
+        const level = place && typeof place.price_level === "number" ? place.price_level : null;
+        if (level == null) return false;
+        return level <= state.maxPriceLevel;
+      };
+      const passOpenNowFilter = (place) => {
+        if (!state.openNow) return true;
+        return Boolean(place && place.opening_hours && place.opening_hours.open_now === true);
+      };
       const request = {
         location: state.center,
         radius: state.radiusMeters,
@@ -1980,13 +2217,13 @@
       };
 
       if (state.keywords.length) request.keyword = state.keywords.join(" ");
-      if (state.maxPriceLevel != null) request.maxPriceLevel = state.maxPriceLevel;
-      if (state.openNow) request.openNow = true;
 
       let { results, status } = await collectNearbyResultsStream(service, request, ({ pageResults, hasNextPage }) => {
         if (thisSearchToken !== searchToken) return;
 
         const incoming = pageResults.filter((place) => {
+          if (!passPriceFilter(place)) return false;
+          if (!passOpenNowFilter(place)) return false;
           const key = placeKey(place);
           return !state.places.some((item) => placeKey(item) === key);
         });
@@ -2023,12 +2260,12 @@
           radius: state.radiusMeters,
           type: "restaurant",
         };
-        if (state.maxPriceLevel != null) fallbackRequest.maxPriceLevel = state.maxPriceLevel;
-        if (state.openNow) fallbackRequest.openNow = true;
         ({ results, status } = await collectNearbyResultsStream(service, fallbackRequest, ({ pageResults, hasNextPage }) => {
           if (thisSearchToken !== searchToken) return;
 
           const incoming = pageResults.filter((place) => {
+            if (!passPriceFilter(place)) return false;
+            if (!passOpenNowFilter(place)) return false;
             const key = placeKey(place);
             return !state.places.some((item) => placeKey(item) === key);
           });
@@ -2059,17 +2296,25 @@
       setSearchButtonLoading(false);
       updateSearchAvailability();
 
-      if (!results || results.length === 0) {
+      if (!results || results.length === 0 || state.places.length === 0) {
         state.places = [];
-        document.getElementById("spin-btn").disabled = true;
+        document.getElementById("wheel-center-btn").disabled = true;
         document.getElementById("wheel-label").textContent = "找不到餐廳，請調整條件";
         drawWheel([]);
         updateBadge();
-        showLocError(getPlacesErrorMessage(status, hasKeyword));
+        if (results && results.length > 0 && state.maxPriceLevel != null && state.openNow) {
+          showLocError("此價格上限且僅看營業中的條件下找不到餐廳，請放寬條件。");
+        } else if (results && results.length > 0 && state.maxPriceLevel != null) {
+          showLocError("此價格上限下找不到餐廳，請提高價格上限或調整範圍。");
+        } else if (results && results.length > 0 && state.openNow) {
+          showLocError("目前條件下找不到營業中的餐廳，請關閉僅看營業中或調整範圍。");
+        } else {
+          showLocError(getPlacesErrorMessage(status, hasKeyword));
+        }
         console.warn("Places nearbySearch returned no results", { status, request });
         return;
       }
-      document.getElementById("spin-btn").disabled = false;
+      document.getElementById("wheel-center-btn").disabled = false;
       const wheelLabel = document.getElementById("wheel-label");
       wheelAngle = 0;
       updateBadge();
@@ -2092,7 +2337,7 @@
       }
 
       places.forEach((place, index) => {
-        const marker = new google.maps.Marker({
+        const marker = createAppMarker({
           position: place.geometry.location,
           map,
           title: place.name,
@@ -2199,7 +2444,7 @@
 
       state.spinning = true;
       hideResult();
-      document.getElementById("spin-btn").disabled = true;
+      document.getElementById("wheel-center-btn").disabled = true;
 
       const totalRotation = Math.PI * 2 * (5 + Math.random() * 5);
       const duration = 4000 + Math.random() * 2000;
@@ -2227,7 +2472,7 @@
         }
 
         state.spinning = false;
-        document.getElementById("spin-btn").disabled = false;
+        document.getElementById("wheel-center-btn").disabled = false;
         showResult(state.places[winnerIdx], winnerIdx);
       }
 
@@ -2308,7 +2553,8 @@
           <div style="font-weight:700;font-size:13px;">${place.name}</div>
           <div style="font-size:12px;color:#888;margin-top:2px;">${place.vicinity || ""}</div>
         `);
-        infoWindow.open(map, targetMarker);
+        const anchor = typeof targetMarker.getAnchor === "function" ? targetMarker.getAnchor() : targetMarker;
+        infoWindow.open({ map, anchor });
       }
 
       syncFavoriteButton();
@@ -2327,9 +2573,10 @@
       renderHistory();
       updateSavedNote();
 
-      const prefs = loadPrefs();
+      const prefs = getPrefsFromUrl() || loadPrefs();
       if (!prefs) {
         updateBadge();
+        syncUrlWithCurrentFilters();
         return;
       }
 
@@ -2368,19 +2615,26 @@
 
       restoringPrefs = false;
       updateSavedNote(prefs);
+      syncUrlWithCurrentFilters();
     }
 
     function initResult() {
-      document.getElementById("spin-btn").addEventListener("click", spinWheel);
-      document.getElementById("btn-retry").addEventListener("click", spinWheel);
-      document.getElementById("favorite-toggle").addEventListener("click", () => toggleFavorite());
-      document.getElementById("clear-favorites-btn").addEventListener("click", () => {
+      const spinBtn = document.getElementById("wheel-center-btn");
+      const retryBtn = document.getElementById("btn-retry");
+      const favoriteToggle = document.getElementById("favorite-toggle");
+      const clearFavoritesBtn = document.getElementById("clear-favorites-btn");
+      const clearHistoryBtn = document.getElementById("clear-history-btn");
+
+      if (spinBtn) spinBtn.addEventListener("click", spinWheel);
+      if (retryBtn) retryBtn.addEventListener("click", spinWheel);
+      if (favoriteToggle) favoriteToggle.addEventListener("click", () => toggleFavorite());
+      if (clearFavoritesBtn) clearFavoritesBtn.addEventListener("click", () => {
         state.favorites = [];
         saveFavorites();
         renderFavorites();
         syncFavoriteButton();
       });
-      document.getElementById("clear-history-btn").addEventListener("click", () => {
+      if (clearHistoryBtn) clearHistoryBtn.addEventListener("click", () => {
         state.history = [];
         saveHistory();
         renderHistory();
@@ -2419,6 +2673,10 @@
       restorePreferences();
       syncFavoriteButton();
       renderIcons();
+
+      window.addEventListener("beforeunload", () => {
+        savePrefs();
+      });
     }
 
     initApiSettings();
