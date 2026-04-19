@@ -395,6 +395,9 @@ const state = {
 // ── Map module ──
 let map, centerMarker, searchCircle, placeMarkers = [], infoWindow, geocoder;
 
+const RADIUS_VALUES = [500, 1000, 2000, 5000];
+const RADIUS_LABELS = ['500m', '1 km', '2 km', '5 km'];
+
 function initMap() {
   const taipei = { lat: 25.0338, lng: 121.5654 };
   map = new google.maps.Map(document.getElementById('map'), {
@@ -419,6 +422,9 @@ function initMap() {
 
   // Lucide icons initialized after DOM is ready
   lucide.createIcons();
+
+  initLocationControls();
+  initControls();
 }
 
 function setCenter(latLng) {
@@ -479,7 +485,6 @@ function reverseGeocode(latLng) {
 }
 
 function updateBadge() {
-  const RADIUS_LABELS = ['500m', '1 km', '2 km', '5 km'];
   const radiusLabel = RADIUS_LABELS[document.getElementById('radius-slider').value];
   const count = state.places.length;
   const addr = document.getElementById('loc-input').value || '已設定位置';
@@ -507,6 +512,108 @@ function clearPlaceMarkers() {
   placeMarkers.forEach(m => m.setMap(null));
   placeMarkers = [];
   infoWindow.close();
+}
+
+// ── Location module ──
+function initLocationControls() {
+  const locInput = document.getElementById('loc-input');
+
+  function geocodeAddress() {
+    const addr = locInput.value.trim();
+    if (!addr) return;
+    geocoder.geocode({ address: addr }, (results, status) => {
+      if (status === 'OK') {
+        const latLng = results[0].geometry.location;
+        map.panTo(latLng);
+        map.setZoom(14);
+        setCenter(latLng);
+        document.getElementById('search-btn').disabled = false;
+      } else {
+        alert('找不到該地址，請重新輸入。');
+      }
+    });
+  }
+
+  locInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') geocodeAddress(); });
+  document.getElementById('loc-search-icon').addEventListener('click', geocodeAddress);
+
+  document.getElementById('btn-my-loc').addEventListener('click', () => {
+    if (!navigator.geolocation) { alert('瀏覽器不支援定位'); return; }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const latLng = new google.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
+        map.panTo(latLng);
+        map.setZoom(14);
+        setCenter(latLng);
+        document.getElementById('search-btn').disabled = false;
+      },
+      () => alert('無法取得位置，請確認瀏覽器定位權限。')
+    );
+  });
+
+  document.getElementById('btn-click-map').addEventListener('click', () => {
+    if (state.clickMapMode) { exitClickMapMode(); return; }
+    enterClickMapMode();
+  });
+}
+
+// ── Controls module ──
+function initControls() {
+  const slider = document.getElementById('radius-slider');
+  const valEl = document.getElementById('radius-val');
+
+  function updateRadius() {
+    const idx = parseInt(slider.value);
+    state.radiusMeters = RADIUS_VALUES[idx];
+    valEl.textContent = RADIUS_LABELS[idx];
+    const pct = (idx / 3) * 100;
+    slider.style.background = `linear-gradient(to right, #7e69b6 ${pct}%, #e0d9f5 ${pct}%)`;
+    updateSearchCircle();
+    updateBadge();
+  }
+
+  slider.addEventListener('input', updateRadius);
+  updateRadius();
+
+  const chipsWrap = document.getElementById('chips-wrap');
+
+  chipsWrap.addEventListener('click', (e) => {
+    const chip = e.target.closest('button.chip');
+    if (!chip) return;
+    const isAll = chip.dataset.value === '';
+
+    if (isAll) {
+      document.querySelectorAll('#chips-wrap button.chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+    } else {
+      document.querySelector('#chips-wrap button.chip[data-value=""]').classList.remove('active');
+      chip.classList.toggle('active');
+      const anyActive = [...document.querySelectorAll('#chips-wrap button.chip')].some(c => c.classList.contains('active'));
+      if (!anyActive) document.querySelector('#chips-wrap button.chip[data-value=""]').classList.add('active');
+    }
+    updateKeywords();
+  });
+
+  document.getElementById('chip-custom').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    const val = e.target.value.trim();
+    if (!val) return;
+    document.querySelector('#chips-wrap button.chip[data-value=""]').classList.remove('active');
+    const newChip = document.createElement('button');
+    newChip.className = 'chip active';
+    newChip.dataset.value = val;
+    newChip.textContent = val;
+    newChip.type = 'button';
+    chipsWrap.insertBefore(newChip, e.target);
+    e.target.value = '';
+    updateKeywords();
+  });
+}
+
+function updateKeywords() {
+  state.keywords = [...document.querySelectorAll('#chips-wrap button.chip.active')]
+    .map(c => c.dataset.value)
+    .filter(v => v !== '');
 }
 </script>
 
