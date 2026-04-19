@@ -1130,6 +1130,7 @@
     let activeSearchBounds = null;
     let activeSearchLoadedCount = 0;
     let activeSearchSawNextPage = false;
+    let restoringPrefs = false;
     const placeIconCache = new Map();
 
     const SEARCH_BTN_DEFAULT = `
@@ -1178,7 +1179,7 @@
     }
 
     function savePrefs() {
-      if (!canUseStorage) return;
+      if (!canUseStorage || restoringPrefs) return;
       const address = document.getElementById("loc-input").value.trim();
       const payload = {
         radiusMeters: state.radiusMeters,
@@ -2332,6 +2333,8 @@
         return;
       }
 
+      restoringPrefs = true;
+
       if (prefs.radiusMeters && RADIUS_VALUES.includes(prefs.radiusMeters)) {
         const radiusSlider = document.getElementById("radius-slider");
         radiusSlider.value = String(RADIUS_VALUES.indexOf(prefs.radiusMeters));
@@ -2362,6 +2365,9 @@
       } else {
         updateBadge();
       }
+
+      restoringPrefs = false;
+      updateSavedNote(prefs);
     }
 
     function initResult() {
